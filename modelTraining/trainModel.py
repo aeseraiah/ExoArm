@@ -2,7 +2,8 @@ from sklearn_rvm.em_rvm import EMRVC
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-# from micromlgen import port_rvm
+from micromlgen import port
+from sklearn.svm import SVC
 
 data = pd.read_csv("../data/12-1-data.txt", delimiter='\t')
 
@@ -55,7 +56,7 @@ for i in range(0, STOP_TRAIN):
 for i in range(0, STOP_TRAIN):
     y1.append(extension)
 
-model = EMRVC(kernel='linear', gamma="scale")
+model = SVC(kernel='rbf', gamma=.0000000001)
 model.fit(features, y1)
 
 # X = [[0,0,350,320, 0,0]]
@@ -72,3 +73,7 @@ else:
 # print("\nPREDICTION: ", prediction)
 
 print("SCORE: ", model.score(X, answ))
+
+
+c_code = port(model)
+print(c_code)
