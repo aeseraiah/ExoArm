@@ -13,6 +13,7 @@ int prediction = 0;
 
 int EXTENSION = 1;
 int FLEXION = 0;
+int SUSTAIN = 2;
 
 void setup() {
   // put your setup code here, to run once:
@@ -39,7 +40,7 @@ void getWindowedAmplitude() {
 
 void getWindowData(){
     for(int i = 0; i < 128; i++) {
-    sensorWindow[i] = analogRead(analogInPin);
+      sensorWindow[i] = analogRead(analogInPin);
   }
 }
 
@@ -64,9 +65,10 @@ void windowedClassifier() {
   // INPUT AMPL INTO CLASSIFER TO DRIVE ACTUATION
   classifySVM();
   // Serial.println(sensorWindow)
-  if(prediction == EXTENSION) Serial.println(EXTENSION);
-  if(prediction == FLEXION) Serial.println(FLEXION);
-  else Serial.println("FAIL");
+  if(prediction == EXTENSION) Serial.println("EXTENSION");
+  if(prediction == FLEXION) Serial.println("FLEXION");
+  if(prediction == SUSTAIN) Serial.println("SUSTAIN");
+  // else Serial.println(prediction);
   // Serial.println(prediction);
   // OUTPUT DIGITAL SIGNAL TO SERVO/ LINEAR ACTUATION
   driveServo();
@@ -94,7 +96,7 @@ void windowedClassifier() {
 
   // wait 100 milliseconds before the next loop for the analog-to-digital
   // converter to settle after the last reading:
-  delay(100);
+  delay(200);
 }
 
 
@@ -231,5 +233,5 @@ void simpleAinPWMout() {
 
   // wait 2 milliseconds before the next loop for the analog-to-digital
   // converter to settle after the last reading:
-  delay(2);
+  delay(200);
 }
