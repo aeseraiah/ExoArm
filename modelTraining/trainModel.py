@@ -4,60 +4,86 @@ import matplotlib.pyplot as plt
 import numpy as np
 from micromlgen import port
 from sklearn.svm import SVC
+import warnings
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import classification_report, confusion_matrix 
 
-data = pd.read_csv("../data/12-1-data.txt", delimiter='\t')
-data1 = pd.read_csv("../data/CoolTerm Capture 2022-12-06 20-02-36.txt")
+#
+#  SPECIFY NUMBER OF TRAINING DATA FILES
+#
 
-# plt.plot(data)
-# plt.show()
-
-# COLUMN NAME: 2
-flexion_startindexes = [391, 773, 1140, 1515, 1881, 2252, 2638, 3000, 3412, 3757, 4133]
-sustain_startindexes = [470, 860, 1220, 1575, 1975,2375,2730,3103, 3490, 3839, 4210]
-extension_startindexes = [551, 917, 1293, 1675, 2051, 2437, 2824, 3200, 3582, 3937, 4319]
+TRAINING_DATA_COUNT = 2
 window_size = 90
-rest_startindexes = [i + window_size for i in extension_startindexes]
 
+excel_file = "../data/filenames-indexes.xlsx"
+filenames = []
 
-# COLUMN NAME: 34
-# flexion_startindexes = [400, 535, 643, 751, 1159, 1328, 1426]
-# extension_startindexes = [457, 562, 693,  791, 1193, 1406, 1460]
-# window_size = 40
+# GET EACH FILENAME AND CORRESPONDING INDEXES
+flexion_startindexes = []
+sustain_startindexes = []
+extension_startindexes = []
+rest_startindexes = []
+for sheet in range(0, TRAINING_DATA_COUNT):
+    curr_sheet = pd.read_excel(excel_file, sheet)
+    filenames.append(curr_sheet['FILENAMES'][0])
+    flexion_startindexes.append(curr_sheet['FLEXION'].tolist())
+    sustain_startindexes.append(curr_sheet['SUSTAIN'].tolist())
+    extension_startindexes.append(curr_sheet['EXTENSION'].tolist())
+    rest_startindexes.append(curr_sheet['REST'].tolist())
+
+# READ IN DATA FROM EACH FILE
+data = []
+for i,filename in enumerate(filenames):
+    data.append(pd.read_csv(filename, delimiter='\t'))
+
+# 
+# DATA PREPROCESSING
+# 
 
 # TURN DATA INTO NUMPY ARRAY
-np_data = data['2'].to_numpy()
+np_data = []
+for curr_array in data:
+    np_data.append(curr_array.iloc[:,0].to_numpy())
 
-# plt.plot(np_data, color = 'blue')
-# plt.plot(data['2'], color = 'blue')
-
-# for i in extension_startindexes:
-#     plt.plot(data['2'][ i : i + window_size], color = 'green')
-# for i in flexion_startindexes:
-#     plt.plot(data['2'][ i : i + window_size], color = 'red')
-# for i in sustain_startindexes:
-#     plt.plot(data['2'][ i : i + window_size], color = 'purple')
-# for i in rest_startindexes:
-#     plt.plot(data['2'][ i : i + window_size], color = 'orange')
-# plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
+# ENSURE DATA SEPARATED
+for npd in np_data:
+    plt.plot(npd)
+plt.title("ALL TRAINING SIGNALS")
 # plt.show()
 
+# 
+# SHOW THE SEPARATION BETWEEN FEATURES
+#
+for index_index in range(0, TRAINING_DATA_COUNT):
+    for i in extension_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'green')
+    for i in flexion_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'red')
+    for i in sustain_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'purple')
+    for i in rest_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'orange')
+    plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
+    # plt.show()
 
-# GENERATE FLEXION ARRAY AND EXTENSION ARRAY
+
+# GENERATE FEATURE ARRAYS
 FLEXION_DATA = []
-for i in flexion_startindexes:
-    FLEXION_DATA.append(np_data[ i : i + window_size])
-
 EXTENSION_DATA = []
-for i in extension_startindexes:
-    EXTENSION_DATA.append(np_data[ i : i + window_size])
-
 SUSTAIN_DATA = []
-for i in sustain_startindexes:
-    SUSTAIN_DATA.append(np_data[ i : i + window_size])
-
 REST_DATA = []
-for i in rest_startindexes:
-    REST_DATA.append(np_data[ i : i + window_size])
+for index_index in range(0, TRAINING_DATA_COUNT):
+    for i in flexion_startindexes[index_index]:
+        FLEXION_DATA.append(np_data[index_index][ i : i + window_size])
+
+    for i in extension_startindexes[index_index]:
+        EXTENSION_DATA.append(np_data[index_index][ i : i + window_size])
+
+    for i in sustain_startindexes[index_index]:
+        SUSTAIN_DATA.append(np_data[index_index][ i : i + window_size])
+
+    for i in rest_startindexes[index_index]:
+        REST_DATA.append(np_data[index_index][ i : i + window_size])
 
 # classifiers
 flexion = 0
@@ -65,62 +91,90 @@ extension = 1
 sustain = 2
 rest = 3
 
-STOP_TRAIN = 6
+# SPLIT DATA INTO TRAINING/TESTING
+STOP_TRAIN = (6*len(FLEXION_DATA))//10
+# print(STOP_TRAIN)
 features = FLEXION_DATA[0:STOP_TRAIN] + EXTENSION_DATA[0:STOP_TRAIN] + SUSTAIN_DATA[0:STOP_TRAIN] + REST_DATA[0:STOP_TRAIN]
 
-# y1 = [flexion, flexion, flexion, flexion, extension, extension, extension, extension]
-y1 = []
+# FILL LABEL ARRAY
+LABEL = []
 for i in range(0, STOP_TRAIN):
-    y1.append(flexion)
-
-for i in range(0, STOP_TRAIN):
-    y1.append(extension)
+    LABEL.append(flexion)
 
 for i in range(0, STOP_TRAIN):
-    y1.append(sustain)
+    LABEL.append(extension)
 
 for i in range(0, STOP_TRAIN):
-    y1.append(rest)
+    LABEL.append(sustain)
 
-model = SVC(kernel='rbf', gamma=.0000000001)
-model.fit(features, y1)
+for i in range(0, STOP_TRAIN):
+    LABEL.append(rest)
 
-# X = [[0,0,350,320, 0,0]]
+# INIT MODEL AND FIT FEATURES/LABELS
+# model = SVC(kernel='rbf', gamma=100, decision_function_shape='ovr')
+# model = SVC(kernel='sigmoid', gamma=.0000001)
+# model.fit(features, LABEL)
+
+# FILL PREDICITON DATA ARRAY AND ANSWER ARRAY
 X = FLEXION_DATA[STOP_TRAIN:] + EXTENSION_DATA[STOP_TRAIN:] + SUSTAIN_DATA[STOP_TRAIN:] + REST_DATA[STOP_TRAIN:] 
-prediction = model.predict(X)
-answ = [flexion, flexion, flexion, flexion, flexion, extension, extension, extension, extension, extension, sustain, sustain, sustain, sustain, sustain, rest, rest, rest, rest, rest]
-if prediction.tolist() != answ:
-    print("\nFAIL!!  ")
-    print("\nPREDICTION: ",prediction)
-    print("SHOULD BE:   [0 0 0 0 0 1 1 1 1 1 2 2 2 2 2 3 3 3 3 3]")
-else:
-    print("PREDICTION:",prediction)
 
-# print("\nPREDICTION: ", prediction)
+answ = []
+for i in range(0, len(FLEXION_DATA[STOP_TRAIN:])):
+    answ.append(flexion)
 
-print("SCORE: ", model.score(X, answ))
+for i in range(0, len(FLEXION_DATA[STOP_TRAIN:])):
+    answ.append(extension)
+
+for i in range(0, len(FLEXION_DATA[STOP_TRAIN:])):
+    answ.append(sustain)
+
+for i in range(0, len(FLEXION_DATA[STOP_TRAIN:])):
+    answ.append(rest)
+
+# # MAKE PREDICTION
+# prediction = model.predict(X)
+
+# # CHECK PREDICTION
+# if prediction.tolist() != answ:
+#     print("\nFAIL!!  ")
+#     print("\nPREDICTION: ",prediction)
+#     print("SHOULD BE:  ",np.array(answ))
+# else:
+#     print("PREDICTION:",prediction)
+
+# print("SCORE:     ", model.score(X, answ))
 
 
-c_code = port(model)
-# print(c_code)
+# c_code = port(model)
+# # print(c_code)
 
+warnings.filterwarnings("ignore")
+# kernels = ["linear", "rbf", "poly"]
+# gammas = [0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001, 0.000000001]
+# cs = [0.01, 0.1, 1, 10, 100, 1000]
+# degrees = [0, 1, 2, 3, 4, 5, 6]
 
+# iterations = len(kernels) * len(gammas) * len(cs) * len(degrees)
+# i = 0
+# for degree in degrees:
+#     for c in cs:
+#         for gamma in gammas:
+#             for kernel in kernels:
+#                 svc = SVC(kernel=kernel, gamma=gamma, C=c, degree=degree, verbose=False, max_iter=10000000).fit(features, LABEL)
+#                 SCORE = svc.score(X, answ)
+#                 if(SCORE>.4584):
+#                     print("SCORE:",SCORE,kernel,gamma,c,degree)
+#                 i+=1
+#                 if(i%50==0):
+#                     print("ITERATION:",i,"/",iterations)
 
+# print("DONE")
 
-# TEST ON UNTRAINED DATAs
-pred_array = np.array([])
-# print(data1)
-np_data1 = data1['87'].to_numpy()
+param_grid = {'degree': [0, 1, 2, 3, 4], 'C': [0.0001,0.001,0.01,0.1,1], 'gamma': [0.01,0.1,0.01,0.001, 0.000001],'kernel': ['rbf', 'poly', 'sigmoid', 'linear'], 'max_iter': [100000]}
+grid = GridSearchCV(SVC(),param_grid,refit=True,verbose=2)
+grid.fit(features,LABEL)
+print(grid.best_estimator_)
 
-
-pred_array = []
-for i in range(0,len(np_data1)-window_size,window_size):
-    # print(i)
-    pred_array.append(np.array(np_data1[ i : i + window_size]))
-# 
-prediction = model.predict(pred_array)
-
-print(prediction)
-
-plt.plot(prediction)
-plt.show()
+grid_predictions = grid.predict(X)
+print(confusion_matrix(answ,grid_predictions))
+print(classification_report(answ,grid_predictions))
