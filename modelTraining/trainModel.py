@@ -9,10 +9,10 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix 
 
 #
-#  SPECIFY NUMBER OF TRAINING DATA FILES
+#  SPECIFY NUMBER OF TRAINING DATA FILES #################################
 #
 
-TRAINING_DATA_COUNT = 2
+TRAINING_DATA_COUNT = 3
 window_size = 90
 
 excel_file = "../data/filenames-indexes.xlsx"
@@ -34,10 +34,9 @@ for sheet in range(0, TRAINING_DATA_COUNT):
 # READ IN DATA FROM EACH FILE
 data = []
 for i,filename in enumerate(filenames):
-    data.append(pd.read_csv(filename, delimiter='\t'))
-
+    data.append(pd.read_csv(filename, delimiter='\t', usecols=[1])) # COL 1 is NON TIME COL
 # 
-# DATA PREPROCESSING
+#           DATA PREPROCESSING #################################
 # 
 
 # TURN DATA INTO NUMPY ARRAY
@@ -52,8 +51,9 @@ plt.title("ALL TRAINING SIGNALS")
 # plt.show()
 
 # 
-# SHOW THE SEPARATION BETWEEN FEATURES
+# SHOW THE SEPARATION BETWEEN FEATURES #################################
 #
+
 for index_index in range(0, TRAINING_DATA_COUNT):
     for i in extension_startindexes[index_index]:
         plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'green')
@@ -64,7 +64,7 @@ for index_index in range(0, TRAINING_DATA_COUNT):
     for i in rest_startindexes[index_index]:
         plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'orange')
     plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
-    # plt.show()
+    plt.show()
 
 
 # GENERATE FEATURE ARRAYS
@@ -110,7 +110,12 @@ for i in range(0, STOP_TRAIN):
 for i in range(0, STOP_TRAIN):
     LABEL.append(rest)
 
-# INIT MODEL AND FIT FEATURES/LABELS
+#
+#
+# INIT MODEL AND FIT FEATURES/LABELS #################################
+#
+#
+
 # model = SVC(kernel='rbf', gamma=100, decision_function_shape='ovr')
 # model = SVC(kernel='sigmoid', gamma=.0000001)
 # model.fit(features, LABEL)
@@ -131,7 +136,9 @@ for i in range(0, len(FLEXION_DATA[STOP_TRAIN:])):
 for i in range(0, len(FLEXION_DATA[STOP_TRAIN:])):
     answ.append(rest)
 
-# # MAKE PREDICTION
+#
+#
+# # MAKE PREDICTION #################################
 # prediction = model.predict(X)
 
 # # CHECK PREDICTION
@@ -169,12 +176,14 @@ warnings.filterwarnings("ignore")
 #                     print("ITERATION:",i,"/",iterations)
 
 # print("DONE")
+# 'rbf', 'poly', 'sigmoid', 
 
-param_grid = {'degree': [0, 1, 2, 3, 4], 'C': [0.0001,0.001,0.01,0.1,1], 'gamma': [0.01,0.1,0.01,0.001, 0.000001],'kernel': ['rbf', 'poly', 'sigmoid', 'linear'], 'max_iter': [100000]}
-grid = GridSearchCV(SVC(),param_grid,refit=True,verbose=2)
-grid.fit(features,LABEL)
-print(grid.best_estimator_)
 
-grid_predictions = grid.predict(X)
-print(confusion_matrix(answ,grid_predictions))
-print(classification_report(answ,grid_predictions))
+# param_grid = {'degree': [0, 1, 2, 3, 4], 'C': [0.0001,0.001,0.01,0.1,1], 'gamma': [0.01,0.1,0.01,0.001, 0.000001],'kernel': ['linear'], 'max_iter': [100000]}
+# grid = GridSearchCV(SVC(),param_grid,refit=True)
+# grid.fit(features,LABEL)
+# print(grid.best_estimator_)
+# print("\nscore\n",grid.best_estimator_.score(X,answ))
+# grid_predictions = grid.predict(X)
+# print(confusion_matrix(answ,grid_predictions))
+# print(classification_report(answ,grid_predictions))
