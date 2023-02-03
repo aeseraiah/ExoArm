@@ -26,10 +26,10 @@ rest_startindexes = []
 for sheet in range(0, TRAINING_DATA_COUNT):
     curr_sheet = pd.read_excel(excel_file, sheet)
     filenames.append(curr_sheet['FILENAMES'][0])
-    flexion_startindexes.append(curr_sheet['FLEXION'].tolist())
-    sustain_startindexes.append(curr_sheet['SUSTAIN'].tolist())
-    extension_startindexes.append(curr_sheet['EXTENSION'].tolist())
-    rest_startindexes.append(curr_sheet['REST'].tolist())
+    flexion_startindexes.append(((curr_sheet['FLEXION'].dropna()).astype(int)).tolist())
+    sustain_startindexes.append(((curr_sheet['SUSTAIN'].dropna()).astype(int)).tolist())
+    extension_startindexes.append(((curr_sheet['EXTENSION'].dropna()).astype(int)).tolist())
+    rest_startindexes.append(((curr_sheet['REST'].dropna()).astype(int)).tolist())
 
 # READ IN DATA FROM EACH FILE
 data = []
@@ -48,7 +48,7 @@ for curr_array in data:
 for npd in np_data:
     plt.plot(npd)
 plt.title("ALL TRAINING SIGNALS")
-# plt.show()
+plt.show()
 
 # 
 # SHOW THE SEPARATION BETWEEN FEATURES #################################
@@ -56,13 +56,13 @@ plt.title("ALL TRAINING SIGNALS")
 
 for index_index in range(0, TRAINING_DATA_COUNT):
     for i in extension_startindexes[index_index]:
-        plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'green')
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'green')
     for i in flexion_startindexes[index_index]:
-        plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'red')
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'red')
     for i in sustain_startindexes[index_index]:
-        plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'purple')
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'purple')
     for i in rest_startindexes[index_index]:
-        plt.plot(data[index_index].iloc[:,0][ i : i + window_size], color = 'orange')
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
     plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
     plt.show()
 
@@ -179,11 +179,11 @@ warnings.filterwarnings("ignore")
 # 'rbf', 'poly', 'sigmoid', 
 
 
-# param_grid = {'degree': [0, 1, 2, 3, 4], 'C': [0.0001,0.001,0.01,0.1,1], 'gamma': [0.01,0.1,0.01,0.001, 0.000001],'kernel': ['linear'], 'max_iter': [100000]}
-# grid = GridSearchCV(SVC(),param_grid,refit=True)
-# grid.fit(features,LABEL)
-# print(grid.best_estimator_)
-# print("\nscore\n",grid.best_estimator_.score(X,answ))
-# grid_predictions = grid.predict(X)
-# print(confusion_matrix(answ,grid_predictions))
-# print(classification_report(answ,grid_predictions))
+param_grid = {'degree': [0, 1, 2, 3, 4], 'C': [0.0001,0.00001,0.0000001,0.1,1], 'gamma': [0.01,0.1,0.01,0.001, 0.000001],'kernel': ['linear', 'rbf', 'poly'], 'max_iter': [10000000]}
+grid = GridSearchCV(SVC(),param_grid,refit=True)
+grid.fit(features,LABEL)
+print(grid.best_estimator_)
+print("\nscore\n",grid.best_estimator_.score(X,answ))
+grid_predictions = grid.predict(X)
+print(confusion_matrix(answ,grid_predictions))
+print(classification_report(answ,grid_predictions))

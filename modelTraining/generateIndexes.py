@@ -1,9 +1,9 @@
 import pandas as pd
 
 # PARSE THROUGH MARKER FILE
-MARKER_FILE = 'markerData/09:57:34.csv'  # CHANGE EACH TIME, SHOULD NOT WORK O/W
+MARKER_FILE = 'markerData/10:56:10.csv'  # CHANGE EACH TIME, SHOULD NOT WORK O/W
 SHEET_NUMBER = 'Sheet3'                  # CHANGE EACH TIME, SHOULD NOT WORK O/W
-data_file = '../data/TEST.txt'           # CHANGE EACH TIME, SHOULD NOT WORK O/W
+data_file = '../data/CoolTerm Capture 2023-02-02 10-56-19.txt'           # CHANGE EACH TIME, SHOULD NOT WORK O/W
 window = 90
 
 # GET MARKER FILE OPENED AND RDY

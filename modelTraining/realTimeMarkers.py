@@ -12,20 +12,24 @@ def main():
 
     # get current time for filename
     t = time.localtime()
-    filename = time.strftime("%H:%M:%S", t)
+    filename = time.strftime("%H/%M/%S_%m/%d/%y", t)
 
     print(f'Starting file time {filename}')
+#'markerData/ + '
+    # fn = open(filename +'.csv', 'w')
+    # fn = open('testme', 'w')
+    # csv_write = csv.writer(fn)
 
-    fn = open('markerData/' + filename +'.csv', 'w')
-    csv_write = csv.writer(fn)
-
-    while(1):
-        key = getkey()
-        if key == 'x':
-            print('done')
-            exit()
-        else:
-            checkKey(key, csv_write)
+    with open(filename + '.csv', 'w+') as fn:
+        csv_write = csv.writer(fn)
+        while(1):
+            key = getkey()
+            if key == 'x':
+                print('done')
+                fn.close()
+                exit()
+            else:
+                checkKey(key, csv_write)
     return
 
 def checkKey(key, csv_write):
