@@ -3,6 +3,7 @@
 import time
 from getkey import getkey, keys
 import csv
+from generateIndexes import gen_index
 
 def main():
     FLEXION = 0
@@ -12,15 +13,11 @@ def main():
 
     # get current time for filename
     t = time.localtime()
-    filename = time.strftime("%H/%M/%S_%m/%d/%y", t)
+    filename = time.strftime("%H:%M:%S_%m:%d:%y", t)
 
     print(f'Starting file time {filename}')
-#'markerData/ + '
-    # fn = open(filename +'.csv', 'w')
-    # fn = open('testme', 'w')
-    # csv_write = csv.writer(fn)
 
-    with open(filename + '.csv', 'w+') as fn:
+    with open(filename + '.csv', 'a') as fn:
         csv_write = csv.writer(fn)
         while(1):
             key = getkey()
