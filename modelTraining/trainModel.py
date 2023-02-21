@@ -8,11 +8,12 @@ import warnings
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix 
 
+
 #
 #  SPECIFY NUMBER OF TRAINING DATA FILES #################################
 #
 
-TRAINING_DATA_COUNT = 6
+TRAINING_DATA_COUNT = 5
 window_size = 100
 
 excel_file = "../data/filenames-indexes.xlsx"
@@ -155,7 +156,7 @@ warnings.filterwarnings("ignore")
 # 'degree': [0, 1, 2, 3], , 'max_iter': [10000000]
 
 
-param_grid = {'C': [1], 'gamma': [0.001],'kernel': ['poly']}
+param_grid = {'C': [10,0.1,0.001,1], 'gamma': [0.001,0.01,0.1,1],'kernel': ['linear'], 'tol': [.0001]}
 grid = GridSearchCV(SVC(),param_grid,refit=True)
 grid.fit(features,LABEL)
 print(grid.best_estimator_)
@@ -163,7 +164,6 @@ print("\nscore\n",grid.best_estimator_.score(X,answ))
 grid_predictions = grid.predict(X)
 print(confusion_matrix(answ,grid_predictions))
 print(classification_report(answ,grid_predictions))
-
 
 c_code = port(grid.best_estimator_)
 print(c_code)

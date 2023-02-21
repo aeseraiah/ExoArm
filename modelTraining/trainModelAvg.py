@@ -4,84 +4,169 @@ import matplotlib.pyplot as plt
 import numpy as np
 from micromlgen import port
 from sklearn.svm import SVC
+import warnings
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import classification_report, confusion_matrix 
 
-data = pd.read_csv("../data/12-1-data.txt", delimiter='\t')
+def Average(lst):
+    return sum(lst)/len(lst)
 
-# plt.plot(data)
-# plt.show()
+#
+#  SPECIFY NUMBER OF TRAINING DATA FILES #################################
+#
 
-# COLUMN NAME: 2
-flexion_startindexes = [391, 773, 1140, 1515, 1881, 2252, 2638, 3000, 3412, 3757, 4133]
-extension_startindexes = [551, 917, 1293, 1675, 2051, 2437, 2824, 3200, 3582, 3937, 4319]
-window_size = 100
+TRAINING_DATA_COUNT = 6
+window_size = 35
 
-# COLUMN NAME: 34
-# flexion_startindexes = [400, 535, 643, 751, 1159, 1328, 1426]
-# extension_startindexes = [457, 562, 693,  791, 1193, 1406, 1460]
-# window_size = 40
+excel_file = "../data/filenames-indexes.xlsx"
+filenames = []
+
+# GET EACH FILENAME AND CORRESPONDING INDEXES
+flexion_startindexes = []
+sustain_startindexes = []
+extension_startindexes = []
+rest_startindexes = []
+for sheet in range(0, TRAINING_DATA_COUNT):
+    curr_sheet = pd.read_excel(excel_file, sheet)
+    filenames.append(curr_sheet['FILENAMES'][0])
+    flexion_startindexes.append(((curr_sheet['FLEXION'].dropna()).astype(int)).tolist())
+    sustain_startindexes.append(((curr_sheet['SUSTAIN'].dropna()).astype(int)).tolist())
+    extension_startindexes.append(((curr_sheet['EXTENSION'].dropna()).astype(int)).tolist())
+    rest_startindexes.append(((curr_sheet['REST'].dropna()).astype(int)).tolist())
+
+# READ IN DATA FROM EACH FILE
+data = []
+for i,filename in enumerate(filenames):
+    data.append(pd.read_csv(filename, delimiter='\t', usecols=[1])) # COL 1 is NON TIME COL
+# 
+#           DATA PREPROCESSING #################################
+# 
 
 # TURN DATA INTO NUMPY ARRAY
-np_data = data['2'].to_numpy()
+np_data = []
+for curr_array in data:
+    np_data.append(curr_array.iloc[:,0].to_numpy())
 
-# plt.plot(np_data, color = 'blue')
-# for i in extension_startindexes:
-#     plt.plot(data['2'][ i : i + window_size], color = 'green')
-# for i in flexion_startindexes:
-#     plt.plot(data['2'][ i : i + window_size], color = 'red')
-# plt.title("FLEXION - RED , EXTENSION - GREEN")
-# plt.show()
+# ENSURE DATA SEPARATED
+for npd in np_data:
+    plt.plot(npd)
+plt.title("ALL TRAINING SIGNALS")
+plt.show()
+
+# 
+# SHOW THE SEPARATION BETWEEN FEATURES #################################
+#
+
+for index_index in range(0, TRAINING_DATA_COUNT):
+    for i in extension_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'green')
+    for i in flexion_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'red')
+    for i in sustain_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'purple')
+    for i in rest_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
+    plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
+    plt.show()
 
 
-# GENERATE FLEXION ARRAY AND EXTENSION ARRAY
-FLEXION_DATA_ARRAY = []
-for i in flexion_startindexes:
-    FLEXION_DATA_ARRAY.append(np_data[ i : i + window_size])
-
+# GENERATE FEATURE ARRAYS
 FLEXION_DATA = []
-for i in FLEXION_DATA_ARRAY:
-    FLEXION_DATA.append([np.mean(i)])
-# print(FLEXION_DATA)
-
-EXTENSION_DATA_ARRAY = []
-for i in extension_startindexes:
-    EXTENSION_DATA_ARRAY.append(np_data[ i : i + window_size])
-
 EXTENSION_DATA = []
-for i in EXTENSION_DATA_ARRAY:
-    EXTENSION_DATA.append([np.mean(i)])
-# print(EXTENSION_DATA)
+SUSTAIN_DATA = []
+REST_DATA = []
+for index_index in range(0, TRAINING_DATA_COUNT):
+    for i in flexion_startindexes[index_index]:
+        FLEXION_DATA.append([Average(np_data[index_index][ i : i + window_size])])
+
+    for i in extension_startindexes[index_index]:
+        EXTENSION_DATA.append([Average(np_data[index_index][ i : i + window_size])])
+
+    for i in sustain_startindexes[index_index]:
+        SUSTAIN_DATA.append([Average(np_data[index_index][ i : i + window_size])])
+
+    for i in rest_startindexes[index_index]:
+        REST_DATA.append([Average(np_data[index_index][ i : i + window_size])])
 
 # classifiers
 flexion = 0
 extension = 1
+sustain = 2
+rest = 3
 
-STOP_TRAIN = 6
-features = FLEXION_DATA[0:STOP_TRAIN] + EXTENSION_DATA[0:STOP_TRAIN]
+# SPLIT DATA INTO TRAINING/TESTING
+FLEXION_STOP_TRAIN = (8*len(FLEXION_DATA))//10
+EXTENSION_STOP_TRAIN = (8*len(EXTENSION_DATA))//10
+SUSTAIN_STOP_TRAIN = (8*len(SUSTAIN_DATA))//10
+REST_STOP_TRAIN = (8*len(REST_DATA))//10
 
-# y1 = [flexion, flexion, flexion, flexion, extension, extension, extension, extension]
-y1=[]
-for i in range(0, STOP_TRAIN):
-    y1.append(flexion)
+# print(STOP_TRAIN)
+# features = FLEXION_DATA[0:FLEXION_STOP_TRAIN] + EXTENSION_DATA[0:EXTENSION_STOP_TRAIN]
+features = FLEXION_DATA[0:FLEXION_STOP_TRAIN] + EXTENSION_DATA[0:EXTENSION_STOP_TRAIN] + SUSTAIN_DATA[0:SUSTAIN_STOP_TRAIN] + REST_DATA[0:REST_STOP_TRAIN]
 
-for i in range(0, STOP_TRAIN):
-    y1.append(extension)
+# FILL LABEL ARRAY
+LABEL = []
+for i in range(0, FLEXION_STOP_TRAIN):
+    LABEL.append(flexion)
 
-model = SVC(kernel='linear', gamma=0.00000001)
-model.fit(np.array(features).reshape(-1,1), y1)
+for i in range(0, EXTENSION_STOP_TRAIN):
+    LABEL.append(extension)
 
-X = FLEXION_DATA[STOP_TRAIN:] + EXTENSION_DATA[STOP_TRAIN:]
-prediction = model.predict(X)
-answ = [flexion, flexion, flexion, flexion, flexion, extension, extension, extension, extension, extension]
-if prediction.tolist() != answ:
-    print("\nFAIL!!  ")
-    print("\nPREDICTION: ",prediction)
-    print("SHOULD BE:   [0 0 0 0 0 1 1 1 1 1]")
-else:
-    print("PREDICTION:",prediction)
+for i in range(0, SUSTAIN_STOP_TRAIN):
+    LABEL.append(sustain)
 
-print("\nPREDICTION: ", prediction)
+for i in range(0, REST_STOP_TRAIN):
+    LABEL.append(sustain)
+print(f'features: {features}')
+print(f'LABEL: {LABEL}')
+#
+#
+# INIT MODEL AND FIT FEATURES/LABELS #################################
+#
+#
 
-print("SCORE: ", model.score(X, answ))
 
-c_code = port(model)
-# print(c_code)
+# FILL PREDICITON DATA ARRAY AND ANSWER ARRAY
+# X = FLEXION_DATA[FLEXION_STOP_TRAIN:] + EXTENSION_DATA[EXTENSION_STOP_TRAIN:]
+X = FLEXION_DATA[FLEXION_STOP_TRAIN:] + EXTENSION_DATA[EXTENSION_STOP_TRAIN:] + SUSTAIN_DATA[SUSTAIN_STOP_TRAIN:] + REST_DATA[REST_STOP_TRAIN:] 
+
+answ = []
+for i in range(0, len(FLEXION_DATA[FLEXION_STOP_TRAIN:])):
+    answ.append(flexion)
+
+for i in range(0, len(EXTENSION_DATA[EXTENSION_STOP_TRAIN:])):
+    answ.append(extension)
+
+for i in range(0, len(SUSTAIN_DATA[SUSTAIN_STOP_TRAIN:])):
+    answ.append(sustain)
+
+for i in range(0, len(REST_DATA[REST_STOP_TRAIN:])):
+    answ.append(sustain)
+
+#
+#
+# # MAKE PREDICTION #################################
+# prediction = model.predict(X)
+
+warnings.filterwarnings("ignore")
+# kernels = ["linear", "rbf", "poly"]
+# gammas = [0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001, 0.000000001]
+# cs = [0.01, 0.1, 1, 10, 100, 1000]
+# degrees = [0, 1, 2, 3, 4, 5, 6]
+
+# print("DONE")
+# 'rbf', 'poly', 'sigmoid', 
+# 'degree': [0, 1, 2, 3], , 'max_iter': [10000000]
+
+
+param_grid = {'C': [10,0.1,0.001,1], 'gamma': [0.001,0.01,0.1,1],'kernel': ['linear', 'poly'], 'degree':[1,2,3,4], 'max_iter': [1000000]}
+grid = GridSearchCV(SVC(),param_grid,refit=True, verbose=2)
+grid.fit(features,LABEL)
+print(grid.best_estimator_)
+print("\nscore\n",grid.best_estimator_.score(X,answ))
+grid_predictions = grid.predict(X)
+print(confusion_matrix(answ,grid_predictions))
+print(classification_report(answ,grid_predictions))
+
+c_code = port(grid.best_estimator_)
+print(c_code)
