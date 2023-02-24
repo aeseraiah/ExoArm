@@ -7,6 +7,7 @@ from sklearn.svm import SVC
 import warnings
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix 
+import pickle
 
 
 #
@@ -65,7 +66,7 @@ for index_index in range(0, TRAINING_DATA_COUNT):
     for i in rest_startindexes[index_index]:
         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
     plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
-    # plt.show()
+    plt.show()
 
 
 # GENERATE FEATURE ARRAYS
@@ -161,9 +162,13 @@ grid = GridSearchCV(SVC(),param_grid,refit=True)
 grid.fit(features,LABEL)
 print(grid.best_estimator_)
 print("\nscore\n",grid.best_estimator_.score(X,answ))
-grid_predictions = grid.predict(X)
-print(confusion_matrix(answ,grid_predictions))
-print(classification_report(answ,grid_predictions))
+# grid_predictions = grid.predict(X)
+# print(confusion_matrix(answ,grid_predictions))
+# print(classification_report(answ,grid_predictions))
 
-c_code = port(grid.best_estimator_)
-print(c_code)
+# c_code = port(grid.best_estimator_)
+# print(c_code)
+
+pikl_fn = 'trained_model.sav'
+pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
+print('MODEL SAVED TO PICKLE FILE')

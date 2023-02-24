@@ -7,6 +7,7 @@ from sklearn.svm import SVC
 import warnings
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix 
+import pickle
 
 def Average(lst):
     return sum(lst)/len(lst)
@@ -51,7 +52,7 @@ for curr_array in data:
 for npd in np_data:
     plt.plot(npd)
 plt.title("ALL TRAINING SIGNALS")
-plt.show()
+# plt.show()
 
 # 
 # SHOW THE SEPARATION BETWEEN FEATURES #################################
@@ -67,7 +68,7 @@ for index_index in range(0, TRAINING_DATA_COUNT):
     for i in rest_startindexes[index_index]:
         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
     plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
-    plt.show()
+    # plt.show()
 
 
 # GENERATE FEATURE ARRAYS
@@ -117,8 +118,8 @@ for i in range(0, SUSTAIN_STOP_TRAIN):
 
 for i in range(0, REST_STOP_TRAIN):
     LABEL.append(sustain)
-print(f'features: {features}')
-print(f'LABEL: {LABEL}')
+# print(f'features: {features}')
+# print(f'LABEL: {LABEL}')
 #
 #
 # INIT MODEL AND FIT FEATURES/LABELS #################################
@@ -159,14 +160,18 @@ warnings.filterwarnings("ignore")
 # 'degree': [0, 1, 2, 3], , 'max_iter': [10000000]
 
 
-param_grid = {'C': [10,0.1,0.001,1], 'gamma': [0.001,0.01,0.1,1],'kernel': ['linear', 'poly'], 'degree':[1,2,3,4], 'max_iter': [1000000]}
+param_grid = {'C': [10,0.1,0.001,1], 'gamma': [0.001,0.01,0.1,1],'kernel': ['linear', 'poly'], 'degree':[1,2,3,4], 'max_iter': [100000]}
 grid = GridSearchCV(SVC(),param_grid,refit=True, verbose=2)
 grid.fit(features,LABEL)
 print(grid.best_estimator_)
 print("\nscore\n",grid.best_estimator_.score(X,answ))
-grid_predictions = grid.predict(X)
-print(confusion_matrix(answ,grid_predictions))
-print(classification_report(answ,grid_predictions))
+# grid_predictions = grid.predict(X)
+# print(confusion_matrix(answ,grid_predictions))
+# print(classification_report(answ,grid_predictions))
 
-c_code = port(grid.best_estimator_)
-print(c_code)
+# c_code = port(grid.best_estimator_)
+# print(c_code)
+
+pikl_fn = 'trained_model.sav'
+pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
+print('MODEL SAVED TO PICKLE FILE')
