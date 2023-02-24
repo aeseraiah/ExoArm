@@ -50,7 +50,7 @@ for curr_array in data:
 for npd in np_data:
     plt.plot(npd)
 plt.title("ALL TRAINING SIGNALS")
-# plt.show()
+plt.show()
 
 # 
 # SHOW THE SEPARATION BETWEEN FEATURES #################################
@@ -147,21 +147,14 @@ for i in range(0, len(EXTENSION_DATA[EXTENSION_STOP_TRAIN:])):
 # prediction = model.predict(X)
 
 warnings.filterwarnings("ignore")
-# kernels = ["linear", "rbf", "poly"]
-# gammas = [0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001, 0.000000001]
-# cs = [0.01, 0.1, 1, 10, 100, 1000]
-# degrees = [0, 1, 2, 3, 4, 5, 6]
-
-# print("DONE")
-# 'rbf', 'poly', 'sigmoid', 
-# 'degree': [0, 1, 2, 3], , 'max_iter': [10000000]
 
 
-param_grid = {'C': [10,0.1,0.001,1], 'gamma': [0.001,0.01,0.1,1],'kernel': ['linear'], 'tol': [.0001]}
-grid = GridSearchCV(SVC(),param_grid,refit=True)
-grid.fit(features,LABEL)
-print(grid.best_estimator_)
-print("\nscore\n",grid.best_estimator_.score(X,answ))
+# # DO PARAM SEARCH
+# param_grid = {'C': [10,0.1,0.001,1], 'gamma': [0.001,0.01,0.1,1],'kernel': ['linear'], 'tol': [.0001]}
+# grid = GridSearchCV(SVC(),param_grid,refit=True)
+# grid.fit(features,LABEL)
+# print(grid.best_estimator_)
+# print("\nscore\n",grid.best_estimator_.score(X,answ))
 # grid_predictions = grid.predict(X)
 # print(confusion_matrix(answ,grid_predictions))
 # print(classification_report(answ,grid_predictions))
@@ -169,6 +162,7 @@ print("\nscore\n",grid.best_estimator_.score(X,answ))
 # c_code = port(grid.best_estimator_)
 # print(c_code)
 
-pikl_fn = 'trained_model.sav'
-pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
-print('MODEL SAVED TO PICKLE FILE')
+# # SAVE TO PKL FILE
+# pikl_fn = 'trained_model.sav'
+# pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
+# print('MODEL SAVED TO PICKLE FILE')

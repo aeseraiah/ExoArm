@@ -65,6 +65,7 @@ fromhere = start
 tohere = end
 atstep = step 
 
+traj += [-np.pi for i in range(0,10)] # DISTINGUISHABLE STARTING PT
 for prog,elem in enumerate(prediction):
     if (prog % 10 == 0):
         print(f'{prog}/{len(prediction)}')
