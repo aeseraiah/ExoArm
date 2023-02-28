@@ -42,12 +42,35 @@ prediction = []
 # FOR NOT AVG MODEL
 emg_data_tohundr = len(emg_data) - len(emg_data) % +100
 
-for i in range(0,emg_data_tohundr,100):
-    prediction.append((pred_model.predict(np.array(emg_data[i:i+100]).reshape(1,-1))).tolist())
+WINDOW = 100 # NOT AVG
+# for i in range(0,emg_data_tohundr,WINDOW):
+#     prediction.append((pred_model.predict(np.array(emg_data[i:i+WINDOW]).reshape(1,-1))).tolist())
 
-# FOR AVG MODEL
-# for i in range(0,emg_data_tohundr,100):
-#     avg_mag = np.average(emg_data[i:i+100])
+# DYNAMIC WINDOWING
+prev_i = 0 # for comparison
+gap = 5 # how much of a decrease between two idx's
+idx = 0 # index for iteration
+backtrack = 10 # how much to go back once window starts
+count_features = 0
+while((idx+WINDOW)<len(emg_data)):
+    if (gap + emg_data[idx]) < prev_i:
+        print(f'WINDOW START: {idx}')
+        # plt.plot(emg_data[idx-10:idx+WINDOW-10])
+        # plt.show()
+        prediction.append((pred_model.predict(np.array(emg_data[idx-10:idx+WINDOW-10]).reshape(1,-1))).tolist())
+        prev_i = emg_data[idx]
+        idx = idx+WINDOW
+        count_features += 1 # feature counted
+    
+    else:
+        prev_i = emg_data[idx]
+        idx+=1
+
+print(f'NUMBER OF FEATURES COUNTED {count_features}')
+# # FOR AVG MODEL
+# WINDOW = 35  # AVG
+# for i in range(0,emg_data_tohundr,WINDOW):
+#     avg_mag = np.average(emg_data[i:i+WINDOW])
 #     prediction.append((pred_model.predict(np.array(avg_mag).reshape(-1,1))).tolist())
 
 # print(prediction)
@@ -67,8 +90,8 @@ atstep = step
 
 traj += [-np.pi for i in range(0,10)] # DISTINGUISHABLE STARTING PT
 for prog,elem in enumerate(prediction):
-    if (prog % 10 == 0):
-        print(f'{prog}/{len(prediction)}')
+    # if (prog % 10 == 0): # PROGRESS
+        # print(f'{prog}/{len(prediction)}')
     classification = elem[0]
     if (classification == flexion) and (prev_classification != flexion):
         # curr_pos = (add_step * np.pi/180) # cos/sin needs radians
@@ -76,18 +99,18 @@ for prog,elem in enumerate(prediction):
         tohere = end
         atstep = step
         prev_classification = classification
-        # print("ADDING FLEXION")
+        print(f"{prog*100} FLEXION")
     elif (classification == extension) and (prev_classification != extension):
         # curr_pos = -(add_step * np.pi/180)
         fromhere = end
         tohere = start
         atstep = -step
         prev_classification = classification
-        # print("ADDING EXTENSION")
+        print(f"{prog*100} EXTENSION")
     else: 
         curr_pos = [tohere for i in range(0,15)]
         traj += curr_pos
-        # print("STAYING")
+        print(f"{prog*100} STAYING")
         continue
 
     curr_pos = [i for i in np.arange(fromhere,tohere,atstep)]
@@ -117,6 +140,6 @@ def animate(i):
     return line,
 
 # SAVE ANIMATION
-anim = FuncAnimation(fig, animate, frames= len(traj), interval=200, blit=True) 
-anim.save('moveArm.gif', writer='imagemagick')
+# anim = FuncAnimation(fig, animate, frames= len(traj), interval=200, blit=True) 
+# anim.save('moveArm.gif', writer='imagemagick')
 # plt.show()

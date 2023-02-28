@@ -14,7 +14,7 @@ import pickle
 #  SPECIFY NUMBER OF TRAINING DATA FILES #################################
 #
 
-TRAINING_DATA_COUNT = 5
+TRAINING_DATA_COUNT = 6
 window_size = 100
 
 excel_file = "../data/filenames-indexes.xlsx"
@@ -50,7 +50,7 @@ for curr_array in data:
 for npd in np_data:
     plt.plot(npd)
 plt.title("ALL TRAINING SIGNALS")
-plt.show()
+# plt.show()
 
 # 
 # SHOW THE SEPARATION BETWEEN FEATURES #################################
@@ -66,7 +66,7 @@ for index_index in range(0, TRAINING_DATA_COUNT):
     for i in rest_startindexes[index_index]:
         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
     plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
-    plt.show()
+    # plt.show()
 
 
 # GENERATE FEATURE ARRAYS
@@ -100,8 +100,8 @@ SUSTAIN_STOP_TRAIN = (8*len(SUSTAIN_DATA))//10
 REST_STOP_TRAIN = (8*len(REST_DATA))//10
 
 # print(STOP_TRAIN)
-features = FLEXION_DATA[0:FLEXION_STOP_TRAIN] + EXTENSION_DATA[0:EXTENSION_STOP_TRAIN]
-# features = FLEXION_DATA[0:FLEXION_STOP_TRAIN] + EXTENSION_DATA[0:EXTENSION_STOP_TRAIN] + SUSTAIN_DATA[0:SUSTAIN_STOP_TRAIN] + REST_DATA[0:REST_STOP_TRAIN]
+# features = FLEXION_DATA[0:FLEXION_STOP_TRAIN] + EXTENSION_DATA[0:EXTENSION_STOP_TRAIN] + SUSTAIN_DATA[0:SUSTAIN_STOP_TRAIN]
+features = FLEXION_DATA[0:FLEXION_STOP_TRAIN] + EXTENSION_DATA[0:EXTENSION_STOP_TRAIN] + SUSTAIN_DATA[0:SUSTAIN_STOP_TRAIN] + REST_DATA[0:REST_STOP_TRAIN]
 
 # FILL LABEL ARRAY
 LABEL = []
@@ -111,11 +111,11 @@ for i in range(0, FLEXION_STOP_TRAIN):
 for i in range(0, EXTENSION_STOP_TRAIN):
     LABEL.append(extension)
 
-# for i in range(0, SUSTAIN_STOP_TRAIN):
-#     LABEL.append(sustain)
+for i in range(0, SUSTAIN_STOP_TRAIN):
+    LABEL.append(sustain)
 
-# for i in range(0, REST_STOP_TRAIN):
-#     LABEL.append(rest)
+for i in range(0, REST_STOP_TRAIN):
+    LABEL.append(sustain)
 
 #
 #
@@ -125,8 +125,8 @@ for i in range(0, EXTENSION_STOP_TRAIN):
 
 
 # FILL PREDICITON DATA ARRAY AND ANSWER ARRAY
-X = FLEXION_DATA[FLEXION_STOP_TRAIN:] + EXTENSION_DATA[EXTENSION_STOP_TRAIN:]
-# X = FLEXION_DATA[FLEXION_STOP_TRAIN:] + EXTENSION_DATA[EXTENSION_STOP_TRAIN:] + SUSTAIN_DATA[SUSTAIN_STOP_TRAIN:] + REST_DATA[REST_STOP_TRAIN:] 
+# X = FLEXION_DATA[FLEXION_STOP_TRAIN:] + EXTENSION_DATA[EXTENSION_STOP_TRAIN:] + SUSTAIN_DATA[SUSTAIN_STOP_TRAIN:]
+X = FLEXION_DATA[FLEXION_STOP_TRAIN:] + EXTENSION_DATA[EXTENSION_STOP_TRAIN:] + SUSTAIN_DATA[SUSTAIN_STOP_TRAIN:] + REST_DATA[REST_STOP_TRAIN:] 
 
 answ = []
 for i in range(0, len(FLEXION_DATA[FLEXION_STOP_TRAIN:])):
@@ -135,11 +135,11 @@ for i in range(0, len(FLEXION_DATA[FLEXION_STOP_TRAIN:])):
 for i in range(0, len(EXTENSION_DATA[EXTENSION_STOP_TRAIN:])):
     answ.append(extension)
 
-# for i in range(0, len(SUSTAIN_DATA[SUSTAIN_STOP_TRAIN:])):
-#     answ.append(sustain)
+for i in range(0, len(SUSTAIN_DATA[SUSTAIN_STOP_TRAIN:])):
+    answ.append(sustain)
 
-# for i in range(0, len(REST_DATA[REST_STOP_TRAIN:])):
-#     answ.append(rest)
+for i in range(0, len(REST_DATA[REST_STOP_TRAIN:])):
+    answ.append(sustain)
 
 #
 #
@@ -149,20 +149,20 @@ for i in range(0, len(EXTENSION_DATA[EXTENSION_STOP_TRAIN:])):
 warnings.filterwarnings("ignore")
 
 
-# # DO PARAM SEARCH
-# param_grid = {'C': [10,0.1,0.001,1], 'gamma': [0.001,0.01,0.1,1],'kernel': ['linear'], 'tol': [.0001]}
-# grid = GridSearchCV(SVC(),param_grid,refit=True)
-# grid.fit(features,LABEL)
-# print(grid.best_estimator_)
-# print("\nscore\n",grid.best_estimator_.score(X,answ))
-# grid_predictions = grid.predict(X)
-# print(confusion_matrix(answ,grid_predictions))
-# print(classification_report(answ,grid_predictions))
+# DO PARAM SEARCH
+param_grid = {'C': [10,0.1,0.001,1], 'gamma': [0.001,0.01,0.1,1],'kernel': ['linear','poly'], 'degree': [1,2,3]}
+grid = GridSearchCV(SVC(),param_grid,refit=True)
+grid.fit(features,LABEL)
+print(grid.best_estimator_)
+print("\nscore\n",grid.best_estimator_.score(X,answ))
+grid_predictions = grid.predict(X)
+print(confusion_matrix(answ,grid_predictions))
+print(classification_report(answ,grid_predictions))
 
 # c_code = port(grid.best_estimator_)
 # print(c_code)
 
-# # SAVE TO PKL FILE
-# pikl_fn = 'trained_model.sav'
-# pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
-# print('MODEL SAVED TO PICKLE FILE')
+# SAVE TO PKL FILE
+pikl_fn = 'trained_model.sav'
+pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
+print('MODEL SAVED TO PICKLE FILE')
