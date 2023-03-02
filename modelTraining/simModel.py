@@ -5,6 +5,8 @@ import numpy as np
 import pickle
 import math
 
+AVG_en = 1 # 0 for non avg model, 1 for avg model
+
 #   GOALS: 
 #       Implement Kalman Filtering into Real Time Actuation
 #       Implement a modeling simulation to view what is to be predicted of the arm's movement
@@ -34,50 +36,69 @@ traj = []
 # traj = [i for i in np.arange(start,end,step)] + [i for i in np.arange(end,start/2,-step)] + [i for i in np.arange(start/2,end,step)] 
 
 test_data = pd.read_csv(test_file, delimiter='\t')
-emg_data = test_data[test_data.columns[1]]
+emg_data_raw = test_data[test_data.columns[1]]
+alpha = 0.1
+expected = 0
+actual = 0
+
+# USE EMA TO SMOOTH SIGNAL BEFORE PREDICTION
+emg_data = []
+for pt in emg_data_raw:
+    actual = alpha * pt + (1 - alpha) * actual
+    emg_data += [actual]
+
+plt.plot(emg_data_raw)
+plt.plot(emg_data)
+plt.legend("EMG DATA", "EMG DATA WITH EMA")
+plt.show()
 
 # import model
-pred_model = pickle.load(open('trained_model.sav', 'rb'))
+if(AVG_en == 0):
+    pred_model = pickle.load(open('trained_model.sav', 'rb'))
+    WINDOW = 100
+else:
+    pred_model_AVG = pickle.load(open('trained_modelAVG.sav', 'rb'))
+    WINDOW = 40
 prediction = []
 
-# FOR NOT AVG MODEL
-emg_data_tohundr = len(emg_data) - len(emg_data) % +100
-
-WINDOW = 100 # NOT AVG
-
-# make predictions in 100 sample window consecutive chunks
-# for i in range(0,emg_data_tohundr,WINDOW):
-#     prediction.append((pred_model.predict(np.array(emg_data[i:i+WINDOW]).reshape(1,-1))).tolist())
-
-# DYNAMIC WINDOWING NOT AVG
+# DYNAMIC WINDOWING 
 # predictions made when drop is detected
 prev_i = 0 # for comparison
-gap = .5 # how much of a decrease between two idx's
+gap = 1 # how much of a decrease between two idx's
 idx = 0 # index for iteration
 backtrack = 10 # how much to go back once window starts
 count_features = 0
-while((idx+WINDOW)<len(emg_data)):
-    if (gap + emg_data[idx]) < prev_i:
-        print(f'WINDOW START: {idx}')
-        # plt.plot(emg_data[idx-10:idx+WINDOW-10])
-        # plt.show()
-        prediction.append((pred_model.predict(np.array(emg_data[idx-10:idx+WINDOW-10]).reshape(1,-1))).tolist())
-        prev_i = emg_data[idx]
-        idx = idx+WINDOW
-        count_features += 1 # feature counted
-    
-    else:
-        prev_i = emg_data[idx]
-        idx+=1
+
+if(AVG_en == 0):
+    while((idx+WINDOW)<len(emg_data)):
+        if (gap + emg_data[idx]) < prev_i:
+            print(f'WINDOW START: {idx}')
+            # plt.plot(emg_data[idx-10:idx+WINDOW-10])
+            # plt.show()
+            prediction.append((pred_model.predict(np.array(emg_data[idx-10:idx+WINDOW-10]).reshape(1,-1))).tolist())
+            prev_i = emg_data[idx]
+            idx = idx+WINDOW
+            count_features += 1 # feature counted
+        
+        else:
+            prev_i = emg_data[idx]
+            idx+=1
+elif(AVG_en == 1):
+    while((idx+WINDOW)<len(emg_data)):
+        if (gap + emg_data[idx]) < prev_i:
+            print(f'WINDOW START: {idx}')
+            # plt.plot(emg_data[idx-10:idx+WINDOW-10])
+            # plt.show()
+            prediction.append((pred_model_AVG.predict(np.array(np.average(emg_data[idx-10:idx+WINDOW-10])).reshape(1,-1))).tolist())
+            prev_i = emg_data[idx]
+            idx = idx+WINDOW
+            count_features += 1 # feature counted
+        
+        else:
+            prev_i = emg_data[idx]
+            idx+=1
 
 print(f'NUMBER OF FEATURES COUNTED {count_features}')
-# # FOR AVG MODEL
-# WINDOW = 35  # AVG
-# for i in range(0,emg_data_tohundr,WINDOW):
-#     avg_mag = np.average(emg_data[i:i+WINDOW])
-#     prediction.append((pred_model.predict(np.array(avg_mag).reshape(-1,1))).tolist())
-
-# print(prediction)
 
 
 flexion = 0

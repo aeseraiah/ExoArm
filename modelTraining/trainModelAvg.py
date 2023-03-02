@@ -17,7 +17,7 @@ def Average(lst):
 #
 
 TRAINING_DATA_COUNT = 6
-window_size = 50
+window_size = 40
 print(f'window size: {window_size}')
 
 excel_file = "../data/filenames-indexes.xlsx"
@@ -44,12 +44,20 @@ for i,filename in enumerate(filenames):
 #           DATA PREPROCESSING #################################
 # 
 
-# TURN DATA INTO NUMPY ARRAY
+# TURN DATA INTO NUMPY ARRAY AND SMOOTH WITH EMA
 np_data = []
+alpha = 0.1
+expected = 0
+actual = 0
 for curr_array in data:
-    np_data.append(curr_array.iloc[:,0].to_numpy())
+    d = curr_array.iloc[:,0].to_numpy()
+    emg_data_ema = []
+    for pt in d:
+        actual = alpha * pt + (1 - alpha) * actual
+        emg_data_ema += [actual]
+    np_data.append(emg_data_ema)
 
-# ENSURE DATA SEPARATED
+# ENSURE DATA SEPARATEDs
 # for npd in np_data:
 #     plt.plot(npd)
 # plt.title("ALL TRAINING SIGNALS")
