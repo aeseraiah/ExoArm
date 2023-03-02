@@ -159,7 +159,9 @@ grid_predictions = grid.predict(X)
 print(confusion_matrix(answ,grid_predictions))
 print(classification_report(answ,grid_predictions))
 
-# c_code = port(grid.best_estimator_)
+c_code = port(grid.best_estimator_)
+with open("/Users/nikol/Desktop/main/MotionClassifier.h",'w') as f:
+    f.write(c_code)
 # print(c_code)
 
 # SAVE TO PKL FILE

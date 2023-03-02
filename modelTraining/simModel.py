@@ -11,9 +11,10 @@ import math
 
 test_file = '../data/CoolTerm Capture 2023-02-07 10-29-08.txt'
 
-L = 2 # LENGTH OF ARM
+L = 1 # LENGTH OF ARM IN CM
 
 
+# SPECIFY START/END ANGLES
 buffer = np.pi/2
 start = 0 + buffer
 end = -np.pi/2 + buffer
@@ -43,12 +44,15 @@ prediction = []
 emg_data_tohundr = len(emg_data) - len(emg_data) % +100
 
 WINDOW = 100 # NOT AVG
+
+# make predictions in 100 sample window consecutive chunks
 # for i in range(0,emg_data_tohundr,WINDOW):
 #     prediction.append((pred_model.predict(np.array(emg_data[i:i+WINDOW]).reshape(1,-1))).tolist())
 
-# DYNAMIC WINDOWING
+# DYNAMIC WINDOWING NOT AVG
+# predictions made when drop is detected
 prev_i = 0 # for comparison
-gap = 5 # how much of a decrease between two idx's
+gap = .5 # how much of a decrease between two idx's
 idx = 0 # index for iteration
 backtrack = 10 # how much to go back once window starts
 count_features = 0
@@ -118,10 +122,10 @@ for prog,elem in enumerate(prediction):
     
 
 # SET UP THE ANIMATION OBJECTS
-fig = plt.figure(figsize=(4, 4),dpi=80)
-ax = plt.axes(xlim=(-1, 3), ylim=(-1, 3)) 
+fig = plt.figure(figsize=(3, 3),dpi=80)
+ax = plt.axes(xlim=(-1, 2), ylim=(-1, 2)) 
 line, = ax.plot([], [], lw=3, color='black') 
-circle = plt.Circle((0, 1), 0.05, color='r') 
+circle = plt.Circle((0, 1), 0.1, color='r') 
 ax.add_patch(circle)
 plt.grid('on')
 plt.title("Move dat arm")
@@ -140,6 +144,6 @@ def animate(i):
     return line,
 
 # SAVE ANIMATION
-# anim = FuncAnimation(fig, animate, frames= len(traj), interval=200, blit=True) 
-# anim.save('moveArm.gif', writer='imagemagick')
+anim = FuncAnimation(fig, animate, frames= len(traj), interval=100, blit=True) 
+anim.save('moveArm.gif', writer='imagemagick')
 # plt.show()
