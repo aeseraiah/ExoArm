@@ -20,7 +20,7 @@ L = 1 # LENGTH OF ARM IN CM
 buffer = np.pi/2
 start = 0 + buffer
 end = -np.pi/2 + buffer
-step = -.1
+step = -.5
 
 # 
 # 
@@ -149,7 +149,6 @@ line, = ax.plot([], [], lw=3, color='black')
 circle = plt.Circle((0, 1), 0.1, color='r') 
 ax.add_patch(circle)
 plt.grid('on')
-plt.title("Move dat arm")
 
 def animate(i):
     theta = traj[i*1]
@@ -159,6 +158,7 @@ def animate(i):
 
     line.set_xdata(np.array([0,endx]))
     line.set_ydata(np.array([0,endy]))
+    ax.set_title(f'Torque: {.3*np.cos(theta)*50} N*m')
 
     circle.center = (endx, endy)
 
