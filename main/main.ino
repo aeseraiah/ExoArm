@@ -1,237 +1,144 @@
+#include "MotionClassifier.h"
+#include <Servo.h>
+
+Servo serv;
+
+Eloquent::ML::Port::SVM mclassifier;
+
 // These constants won't change. They're used to give names to the pins used:
 const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
 const int analogOutPin = 7;  // Analog output pin that the LED is attached to
 
-int sensorValue = 0;  // value read from the pot
 int outputValue = 0;  // value output to the PWM (analog out)
 int D7 = 7;
 
-float sensorWindow[128]; // init sensor array of window size
-int amplitudeWindow;
-
 int prediction = 0;
+int EXT = 1;
+int FLX = 0;
+int RST = 2;
 
-int EXTENSION = 1;
-int FLEXION = 0;
-int SUSTAIN = 2;
+
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(A0, INPUT);
   pinMode(D7, OUTPUT);
+  serv.attach(9);
 }
 
 void loop() {
   windowedClassifier();
 }
 
-void getWindowedAmplitude() {
-  // reads EMG signal for 128 samples, 16 comm/s, .0625s and outputs average of the window amplitude
-  for(int i = 0; i < 128; i++) {
-    sensorValue = analogRead(analogInPin);
-    sensorWindow[i] = sensorValue; // save sensor value into array for smoothing? or do smoothing before hand
-    amplitudeWindow += sensorValue; // keep running sum of each amplitude for average
+void driveServo(int pred){
+
+  // int SERV_PIN = 9;   // PWM pin
+  int SERV_MIN = 10;   // minimum servo angle
+  int SERV_MAX = 80; // maximum sevo angle
+
+  unsigned long dt_ms = 30; // 16 Hz
+
+  int actual;
+  // float alpha = 0.25; // Must be between 0 and 1        
+
+  // actual = ema(pred, actual, 0.25);
+
+  if (pred == EXT) {
+    // actual = min(actual + 10, SERV_MAX);
+    actual = SERV_MAX;
+  }
+  else if (pred == FLX) {
+    // actual = max(actual - 10, SERV_MIN);
+    actual = SERV_MIN;
   }
 
-  amplitudeWindow /= 128; // get average amplitude for the window
-  
-}
 
-void getWindowData(){
-    for(int i = 0; i < 128; i++) {
-      sensorWindow[i] = analogRead(analogInPin);
-  }
-}
+  // actual = max(actual, SERV_MIN);
+  // actual = min(actual, SERV_MAX);
+  serv.write(actual);
+  delay(50);
 
-void driveServo(){
-  ;
+  // Serial.print("Lo:"); Serial.print(SERV_MIN - 10); Serial.print(",");
+  // Serial.print("Hi:"); Serial.print(SERV_MAX + 10); Serial.print(",");
+
+  // Serial.print("Expected:"); Serial.print(expected); Serial.print(",");
+  // Serial.print("Actual:"); Serial.println(actual);
+
+  // delay(dt_ms);
 }
 
 void driveLinAct(){
   ;
 }
 
-void classifySVM(){
-  prediction = predict(sensorWindow);
-}
-
 void windowedClassifier() {
 
-  // READ 128 SAMPLE WINDOWS FROM EMG & AVERAGE
+  // float sensorWindow[100];
+  int sensorWindow;
+
+
+  // READ 100 SAMPLE WINDOWS FROM EMG & AVERAGE
   // getWindowedAmplitude();
-  getWindowData(); // has window of data saved, pass to SVC CLASSIFIER
-
-  // INPUT AMPL INTO CLASSIFER TO DRIVE ACTUATION
-  classifySVM();
-  // Serial.println(sensorWindow)
-  if(prediction == EXTENSION) Serial.println("EXTENSION");
-  if(prediction == FLEXION) Serial.println("FLEXION");
-  if(prediction == SUSTAIN) Serial.println("SUSTAIN");
-  // else Serial.println(prediction);
-  // Serial.println(prediction);
-  // OUTPUT DIGITAL SIGNAL TO SERVO/ LINEAR ACTUATION
-  driveServo();
-
-  driveLinAct();
   
-  int activation_threshold = 75;
-
-  // if(outputValue>activation_threshold){
-  //   digitalWrite(D7,1);
-  //   delay(1); // pulse 1s
-  //   digitalWrite(D7,0);
-  // }
-  // else{ 
-  //   digitalWrite(D7,1);
-  //   delay(2); // pulse 2s
-  //   digitalWrite(D7,0);
+  // GET WINDOW TO CLASSIFY
+  //consecutive
+  // for(int i = 0; i < 100; i++) {
+  //   // sensorWindow[i] = analogRead(analogInPin); // save signal, not AVG
+  //   sensorWindow += analogRead(analogInPin); // running sum, AVG
+  //   delay(30);
   // }
 
-  // SERIAL OUTPUT FOR DEBUGGING
-  // Serial.print("sensor = ");
-  // Serial.print(sensorValue);
-  // Serial.print("\t output = ");
-  // Serial.println(outputValue);
+ // GET WINDOW TO CLASSIFY
+  //consecutive
+  float gap = 10;
+  int backtrack = 10;
+  int val = 0;
+  int windAVG = 40;
+  int wind = 100;
+  int window;
+  int prev_i = 0;
 
-  // wait 100 milliseconds before the next loop for the analog-to-digital
-  // converter to settle after the last reading:
-  delay(200);
-}
+  int actual = 0;
 
 
-// PASTE PREDICTION MODEL BELOW
-#pragma once
-#include <stdarg.h>
+  window = windAVG;
 
-/**
-* Predict class for features vector
-*/
-int predict(float *x) {
-    float kernels[18] = { 0 };
-    float decisions[3] = { 0 };
-    int votes[3] = { 0 };
-    kernels[0] = compute_kernel(x,   4.0  , 5.0  , 6.0  , 7.0  , 8.0  , 8.0  , 9.0  , 9.0  , 10.0  , 11.0  , 11.0  , 12.0  , 12.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 14.0  , 13.0  , 14.0  , 14.0  , 14.0  , 14.0  , 14.0  , 14.0  , 14.0  , 14.0  , 14.0  , 14.0  , 14.0  , 14.0  , 13.0  , 13.0  , 14.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 12.0  , 13.0  , 12.0  , 12.0  , 12.0  , 11.0  , 12.0  , 11.0  , 11.0  , 11.0  , 11.0  , 11.0  , 11.0  , 10.0  , 11.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 10.0  , 10.0  , 9.0  , 9.0  , 9.0  , 10.0  , 9.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0 );
-    kernels[1] = compute_kernel(x,   2.0  , 3.0  , 3.0  , 5.0  , 6.0  , 7.0  , 8.0  , 8.0  , 9.0  , 9.0  , 10.0  , 10.0  , 11.0  , 11.0  , 10.0  , 11.0  , 11.0  , 11.0  , 12.0  , 11.0  , 12.0  , 12.0  , 12.0  , 13.0  , 12.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 12.0  , 13.0  , 12.0  , 12.0  , 13.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 11.0  , 11.0  , 11.0  , 11.0  , 12.0  , 12.0  , 11.0  , 12.0  , 11.0  , 12.0  , 11.0  , 11.0  , 11.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 11.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 11.0  , 10.0  , 10.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0 );
-    kernels[2] = compute_kernel(x,   3.0  , 4.0  , 5.0  , 7.0  , 8.0  , 10.0  , 10.0  , 10.0  , 11.0  , 11.0  , 11.0  , 12.0  , 11.0  , 12.0  , 12.0  , 12.0  , 12.0  , 11.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 11.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 11.0  , 12.0  , 11.0  , 11.0  , 11.0  , 10.0  , 11.0  , 11.0  , 10.0  , 11.0  , 11.0  , 10.0  , 11.0  , 11.0  , 11.0  , 11.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 9.0  , 10.0  , 9.0  , 10.0  , 9.0  , 10.0  , 9.0  , 9.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0 );
-    kernels[3] = compute_kernel(x,   4.0  , 5.0  , 6.0  , 8.0  , 9.0  , 10.0  , 11.0  , 12.0  , 13.0  , 13.0  , 14.0  , 15.0  , 15.0  , 15.0  , 15.0  , 14.0  , 15.0  , 14.0  , 14.0  , 14.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 12.0  , 13.0  , 13.0  , 12.0  , 13.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 11.0  , 12.0  , 12.0  , 11.0  , 12.0  , 12.0  , 12.0  , 12.0  , 11.0  , 11.0  , 11.0  , 10.0  , 11.0  , 11.0  , 10.0  , 10.0  , 9.0  , 10.0  , 9.0  , 10.0  , 10.0  , 9.0  , 10.0  , 9.0  , 10.0  , 10.0  , 9.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 10.0  , 9.0  , 9.0  , 9.0  , 8.0 );
-    kernels[4] = compute_kernel(x,   7.0  , 7.0  , 7.0  , 6.0  , 7.0  , 6.0  , 7.0  , 7.0  , 7.0  , 8.0  , 9.0  , 9.0  , 9.0  , 10.0  , 11.0  , 12.0  , 13.0  , 14.0  , 15.0  , 15.0  , 16.0  , 16.0  , 16.0  , 17.0  , 16.0  , 16.0  , 16.0  , 15.0  , 15.0  , 14.0  , 14.0  , 15.0  , 14.0  , 14.0  , 14.0  , 13.0  , 14.0  , 14.0  , 13.0  , 14.0  , 13.0  , 14.0  , 13.0  , 13.0  , 13.0  , 12.0  , 12.0  , 12.0  , 11.0  , 11.0  , 12.0  , 11.0  , 12.0  , 11.0  , 11.0  , 11.0  , 11.0  , 11.0  , 11.0  , 10.0  , 11.0  , 11.0  , 10.0  , 11.0  , 10.0  , 11.0  , 11.0  , 10.0  , 11.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 10.0 );
-    kernels[5] = compute_kernel(x,   5.0  , 5.0  , 6.0  , 5.0  , 6.0  , 5.0  , 5.0  , 5.0  , 5.0  , 6.0  , 6.0  , 6.0  , 6.0  , 6.0  , 6.0  , 6.0  , 7.0  , 9.0  , 13.0  , 14.0  , 14.0  , 13.0  , 12.0  , 11.0  , 10.0  , 8.0  , 8.0  , 7.0  , 8.0  , 7.0  , 8.0  , 8.0  , 9.0  , 10.0  , 11.0  , 14.0  , 15.0  , 18.0  , 20.0  , 22.0  , 23.0  , 23.0  , 24.0  , 24.0  , 23.0  , 24.0  , 24.0  , 23.0  , 23.0  , 22.0  , 22.0  , 22.0  , 21.0  , 21.0  , 21.0  , 20.0  , 21.0  , 20.0  , 20.0  , 19.0  , 19.0  , 19.0  , 18.0  , 18.0  , 19.0  , 18.0  , 18.0  , 18.0  , 17.0  , 17.0  , 16.0  , 16.0  , 16.0  , 15.0  , 16.0  , 15.0  , 15.0  , 15.0  , 15.0  , 14.0  , 14.0  , 13.0  , 14.0  , 14.0  , 14.0  , 14.0  , 13.0  , 13.0  , 13.0  , 12.0 );
-    kernels[6] = compute_kernel(x,   7.0  , 7.0  , 6.0  , 7.0  , 6.0  , 7.0  , 7.0  , 9.0  , 10.0  , 12.0  , 14.0  , 15.0  , 17.0  , 18.0  , 19.0  , 20.0  , 21.0  , 21.0  , 22.0  , 22.0  , 22.0  , 22.0  , 22.0  , 22.0  , 22.0  , 21.0  , 21.0  , 21.0  , 21.0  , 21.0  , 20.0  , 20.0  , 20.0  , 19.0  , 19.0  , 18.0  , 17.0  , 16.0  , 16.0  , 15.0  , 14.0  , 13.0  , 12.0  , 12.0  , 11.0  , 11.0  , 10.0  , 10.0  , 9.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 6.0  , 6.0  , 6.0  , 6.0  , 5.0  , 5.0  , 5.0  , 5.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0 );
-    kernels[7] = compute_kernel(x,   10.0  , 13.0  , 14.0  , 16.0  , 18.0  , 19.0  , 21.0  , 22.0  , 23.0  , 24.0  , 24.0  , 24.0  , 26.0  , 25.0  , 25.0  , 25.0  , 25.0  , 25.0  , 25.0  , 24.0  , 24.0  , 23.0  , 23.0  , 22.0  , 21.0  , 20.0  , 19.0  , 18.0  , 17.0  , 16.0  , 15.0  , 14.0  , 14.0  , 13.0  , 12.0  , 11.0  , 11.0  , 10.0  , 10.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 6.0  , 6.0  , 6.0  , 6.0  , 5.0  , 5.0  , 5.0  , 5.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0 );
-    kernels[8] = compute_kernel(x,   7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 8.0  , 9.0  , 11.0  , 12.0  , 15.0  , 17.0  , 18.0  , 20.0  , 20.0  , 21.0  , 22.0  , 22.0  , 23.0  , 23.0  , 23.0  , 24.0  , 23.0  , 23.0  , 22.0  , 21.0  , 21.0  , 20.0  , 19.0  , 19.0  , 18.0  , 17.0  , 16.0  , 15.0  , 15.0  , 14.0  , 13.0  , 12.0  , 12.0  , 11.0  , 10.0  , 10.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 6.0  , 6.0  , 6.0  , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0  , 2.0 );
-    kernels[9] = compute_kernel(x,   12.0  , 14.0  , 15.0  , 16.0  , 18.0  , 19.0  , 20.0  , 20.0  , 21.0  , 22.0  , 22.0  , 22.0  , 22.0  , 21.0  , 21.0  , 21.0  , 20.0  , 20.0  , 19.0  , 19.0  , 19.0  , 18.0  , 18.0  , 18.0  , 17.0  , 18.0  , 17.0  , 17.0  , 16.0  , 15.0  , 15.0  , 14.0  , 14.0  , 14.0  , 13.0  , 13.0  , 12.0  , 12.0  , 12.0  , 12.0  , 12.0  , 11.0  , 11.0  , 10.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 7.0  , 6.0  , 6.0  , 6.0  , 6.0  , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 4.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 3.0  , 2.0  , 3.0  , 2.0 );
-    kernels[10] = compute_kernel(x,   8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 8.0  , 8.0  , 8.0  , 9.0  , 9.0  , 10.0  , 11.0  , 13.0  , 14.0  , 15.0  , 16.0  , 16.0  , 18.0  , 18.0  , 19.0  , 19.0  , 19.0  , 20.0  , 20.0  , 20.0  , 20.0  , 19.0  , 18.0  , 18.0  , 17.0  , 17.0  , 17.0  , 16.0  , 16.0  , 16.0  , 16.0  , 16.0  , 15.0  , 15.0  , 15.0  , 14.0  , 15.0  , 14.0  , 13.0  , 14.0  , 13.0  , 12.0  , 12.0  , 11.0  , 11.0  , 11.0  , 11.0  , 11.0  , 10.0  , 10.0  , 10.0  , 9.0  , 9.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 6.0  , 6.0  , 6.0  , 6.0  , 6.0  , 6.0  , 7.0  , 6.0  , 6.0  , 7.0  , 6.0 );
-    kernels[11] = compute_kernel(x,   7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 8.0  , 9.0  , 11.0  , 11.0  , 13.0  , 14.0  , 15.0  , 17.0  , 18.0  , 19.0  , 21.0  , 21.0  , 22.0  , 23.0  , 22.0  , 23.0  , 23.0  , 23.0  , 24.0  , 24.0  , 24.0  , 24.0  , 23.0  , 24.0  , 23.0  , 23.0  , 23.0  , 22.0  , 22.0  , 21.0  , 20.0  , 20.0  , 20.0  , 19.0  , 19.0  , 18.0  , 18.0  , 18.0  , 17.0  , 17.0  , 16.0  , 16.0  , 15.0  , 15.0  , 14.0  , 14.0  , 13.0  , 14.0  , 13.0  , 13.0  , 13.0  , 13.0  , 13.0  , 12.0  , 12.0  , 12.0  , 11.0  , 11.0  , 11.0  , 10.0  , 10.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 6.0  , 7.0  , 6.0  , 6.0 );
-    kernels[12] = compute_kernel(x,   8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 8.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 8.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 6.0  , 7.0  , 6.0  , 7.0  , 7.0  , 9.0  , 10.0 );
-    kernels[13] = compute_kernel(x,   9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 8.0  , 7.0  , 7.0  , 8.0  , 8.0  , 8.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 8.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 8.0  , 8.0  , 9.0  , 10.0  , 13.0  , 14.0  , 16.0  , 18.0  , 19.0  , 21.0  , 22.0  , 23.0  , 24.0  , 24.0  , 24.0  , 26.0  , 25.0  , 25.0  , 25.0  , 25.0  , 25.0  , 25.0  , 24.0  , 24.0  , 23.0  , 23.0  , 22.0  , 21.0  , 20.0  , 19.0  , 18.0  , 17.0  , 16.0  , 15.0  , 14.0  , 14.0 );
-    kernels[14] = compute_kernel(x,   9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 8.0  , 9.0  , 11.0  , 12.0  , 15.0  , 17.0  , 18.0  , 20.0  , 20.0  , 21.0  , 22.0  , 22.0 );
-    kernels[15] = compute_kernel(x,   10.0  , 10.0  , 9.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 10.0  , 10.0  , 10.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 10.0  , 9.0  , 9.0  , 9.0  , 9.0  , 10.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0 );
-    kernels[16] = compute_kernel(x,   9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 7.0  , 8.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 8.0 );
-    kernels[17] = compute_kernel(x,   8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 8.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 9.0  , 8.0  , 8.0  , 8.0  , 9.0  , 8.0  , 9.0  , 9.0  , 8.0  , 9.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 8.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 7.0  , 8.0  , 9.0  , 11.0  , 11.0  , 13.0  , 14.0  , 15.0  , 17.0  , 18.0  , 19.0  , 21.0  , 21.0  , 22.0  , 23.0  , 22.0  , 23.0  , 23.0  , 23.0  , 24.0  , 24.0  , 24.0  , 24.0 );
-    decisions[0] = -7.7486e-07
-    + kernels[0]
-    + kernels[1]
-    + kernels[2]
-    + kernels[3]
-    + kernels[4]
-    + kernels[5]
-    - kernels[6]
-    - kernels[7]
-    - kernels[8]
-    - kernels[9]
-    - kernels[10]
-    - kernels[11]
-    ;
-    decisions[1] = -3.27826e-07
-    + kernels[0]
-    + kernels[1]
-    + kernels[2]
-    + kernels[3]
-    + kernels[4]
-    + kernels[5]
-    - kernels[12]
-    - kernels[13]
-    - kernels[14]
-    - kernels[15]
-    - kernels[16]
-    - kernels[17]
-    ;
-    decisions[2] = 7.45058e-07
-    + kernels[6]
-    + kernels[7]
-    + kernels[8]
-    + kernels[9]
-    + kernels[10]
-    + kernels[11]
-    - kernels[12]
-    - kernels[13]
-    - kernels[14]
-    - kernels[15]
-    - kernels[16]
-    - kernels[17]
-    ;
-    votes[decisions[0] > 0 ? 0 : 1] += 1;
-    votes[decisions[1] > 0 ? 0 : 2] += 1;
-    votes[decisions[2] > 0 ? 1 : 2] += 1;
-    int val = votes[0];
-    int idx = 0;
-
-    for (int i = 1; i < 3; i++) {
-        if (votes[i] > val) {
-            val = votes[i];
-            idx = i;
-        }
+  while(1){
+    val = analogRead(analogInPin);
+    actual = ema(val, actual, 0.1);
+    // Serial.println(val);s
+    if((gap + actual) < prev_i){
+      for(int i = 0; i < window; i++) {
+        // sensorWindow[i] = analogRead(analogInPin); // save signal, not AVG
+        val = analogRead(analogInPin);
+        actual = ema(val, actual, 0.1);
+        // Serial.println(val);
+        sensorWindow += actual; // running sum, AVG
+        delay(30);
+      }
+      break;
+    }
+    else{
+      prev_i = val;
+      continue;
     }
 
-    return idx;
-}
-
-/**
-* Compute kernel between feature vector and support vector.
-* Kernel type: rbf
-*/
- float compute_kernel(float *x, ...) {
-    va_list w;
-    va_start(w, 90);
-    float kernel = 0.0;
-
-    for (uint16_t i = 0; i < 90; i++) {
-        kernel += pow(x[i] - va_arg(w, double), 2);
-    }
-
-    return exp(-1e-10 * kernel);
-}
-
-
-void simpleAinPWMout() {
-  // read the analog in value:
-  sensorValue = analogRead(analogInPin);
-  // map it to the range of the analog out:
-  outputValue = map(sensorValue, 0, 1023, 0, 255);
-
-  int activation_threshold = 75;
-
-  if(outputValue>activation_threshold){
-    digitalWrite(D7,1);
-    delay(1); // pulse 1s
-    digitalWrite(D7,0);
   }
-  else{ 
-    digitalWrite(D7,1);
-    delay(2); // pulse 2s
-    digitalWrite(D7,0);
-  }
-  // change the analog out value:
-  analogWrite(analogOutPin, outputValue);
 
-  // print the results to the Serial Monitor:
-  Serial.print("sensor = ");
-  Serial.print(sensorValue);
-  Serial.print("\t output = ");
-  Serial.println(outputValue);
+  // INPUT AMPL INTO CLASSIFER TO GET DIRECTION
+  prediction = mclassifier.predict(sensorWindow/window); // get avg
 
-  // wait 2 milliseconds before the next loop for the analog-to-digital
-  // converter to settle after the last reading:
-  delay(200);
+  if(prediction == EXT) Serial.println(F("E"));
+  if(prediction == FLX) Serial.println(F("F"));
+  if(prediction == RST) Serial.println(F("R"));
+  // if(prediction == SUSTAIN) Serial.println(F("SUSTAIN"));
+
+// OUTPUT DIGITAL SIGNAL TO SERVO/ LINEAR ACTUATION
+  driveServo(prediction);
 }
+
+int ema(int exp, int actual, int alpha){
+  return alpha * exp + (1 - alpha) * actual;
+}
+  // driveLinAct()
