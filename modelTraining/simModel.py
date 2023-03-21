@@ -158,7 +158,7 @@ def animate(i):
 
     line.set_xdata(np.array([0,endx]))
     line.set_ydata(np.array([0,endy]))
-    ax.set_title(f'Torque: {.3*np.cos(theta)*50} N*m')
+    ax.set_title(f'Torque: {(.3*np.cos(theta)*50):.2f} N*m')
 
     circle.center = (endx, endy)
 

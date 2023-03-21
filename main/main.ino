@@ -13,6 +13,7 @@ int outputValue = 0;  // value output to the PWM (analog out)
 int D7 = 7;
 
 int prediction = 0;
+int prevpred = 1;
 int EXT = 1;
 int FLX = 0;
 int RST = 2;
@@ -28,14 +29,15 @@ void setup() {
 }
 
 void loop() {
-  windowedClassifier();
+  // windowedClassifier();
+  testServo();
 }
 
 void driveServo(int pred){
 
-  // int SERV_PIN = 9;   // PWM pin
-  int SERV_MIN = 10;   // minimum servo angle
-  int SERV_MAX = 80; // maximum sevo angle
+  int SERV_PIN = 9;   // PWM pin
+  int SERV_MIN = 2000;   // minimum servo angle FLEXION
+  int SERV_MAX = -20; // maximum sevo angle EXTENSION
 
   unsigned long dt_ms = 30; // 16 Hz
 
@@ -44,20 +46,25 @@ void driveServo(int pred){
 
   // actual = ema(pred, actual, 0.25);
 
-  if (pred == EXT) {
+  if ((pred == EXT) && (prevpred == FLX)) {
     // actual = min(actual + 10, SERV_MAX);
-    actual = SERV_MAX;
-  }
-  else if (pred == FLX) {
-    // actual = max(actual - 10, SERV_MIN);
+    Serial.println("MOVE EXT");
     actual = SERV_MIN;
+    serv.write(actual);
+    delay(5000);
+  }
+  else if ((pred == FLX) && (prevpred == EXT)) {
+    // actual = max(actual - 10, SERV_MIN);
+    Serial.println("MOVE FLX");
+    actual = SERV_MAX;
+    serv.write(actual);
+    delay(5000);
   }
 
 
   // actual = max(actual, SERV_MIN);
   // actual = min(actual, SERV_MAX);
-  serv.write(actual);
-  delay(50);
+
 
   // Serial.print("Lo:"); Serial.print(SERV_MIN - 10); Serial.print(",");
   // Serial.print("Hi:"); Serial.print(SERV_MAX + 10); Serial.print(",");
@@ -66,6 +73,7 @@ void driveServo(int pred){
   // Serial.print("Actual:"); Serial.println(actual);
 
   // delay(dt_ms);
+  prevpred = pred;
 }
 
 void driveLinAct(){
@@ -107,7 +115,7 @@ void windowedClassifier() {
   while(1){
     val = analogRead(analogInPin);
     actual = ema(val, actual, 0.1);
-    // Serial.println(val);s
+    // Serial.println(val);
     if((gap + actual) < prev_i){
       for(int i = 0; i < window; i++) {
         // sensorWindow[i] = analogRead(analogInPin); // save signal, not AVG
@@ -135,7 +143,36 @@ void windowedClassifier() {
   // if(prediction == SUSTAIN) Serial.println(F("SUSTAIN"));
 
 // OUTPUT DIGITAL SIGNAL TO SERVO/ LINEAR ACTUATION
+
   driveServo(prediction);
+}
+void testServo() {
+
+  // float sensorWindow[100];
+  int sensorWindow;
+
+ // GET WINDOW TO CLASSIFY
+  //consecutive
+  float gap = 10;
+  int backtrack = 10;
+  int val = 0;
+  int windAVG = 40;
+  int wind = 100;
+  int window;
+  int prev_i = 0;
+
+  int actual = 0;
+
+
+  window = windAVG;
+
+  int predictionArray[6] = {FLX,EXT,FLX,EXT,FLX,EXT};
+  for(int i=0;i<10;i++){
+    Serial.println(predictionArray[i]);
+    driveServo(predictionArray[i]);
+
+  }
+  // driveServo(prediction);
 }
 
 int ema(int exp, int actual, int alpha){
