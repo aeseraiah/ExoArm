@@ -50,7 +50,7 @@ for pt in emg_data_raw:
 plt.plot(emg_data_raw)
 plt.plot(emg_data)
 plt.legend("EMG DATA", "EMG DATA WITH EMA")
-plt.show()
+# plt.show()
 
 # import model
 if(AVG_en == 0):
@@ -89,7 +89,7 @@ elif(AVG_en == 1):
             print(f'WINDOW START: {idx}')
             # plt.plot(emg_data[idx-10:idx+WINDOW-10])
             # plt.show()
-            prediction.append((pred_model_AVG.predict(np.array(np.average(emg_data[idx-10:idx+WINDOW-10])).reshape(1,-1))).tolist())
+            prediction.append((pred_model_AVG.predict(np.array(np.average(emg_data[idx:idx+WINDOW])).reshape(1,-1))).tolist())
             prev_i = emg_data[idx]
             idx = idx+WINDOW
             count_features += 1 # feature counted
@@ -133,7 +133,7 @@ for prog,elem in enumerate(prediction):
         prev_classification = classification
         print(f"{prog*100} EXTENSION")
     else: 
-        curr_pos = [tohere for i in range(0,15)]
+        curr_pos = [tohere for i in range(0,5)]
         traj += curr_pos
         print(f"{prog*100} STAYING")
         continue
@@ -165,6 +165,6 @@ def animate(i):
     return line,
 
 # SAVE ANIMATION
-anim = FuncAnimation(fig, animate, frames= len(traj), interval=100, blit=True) 
+anim = FuncAnimation(fig, animate, frames= len(traj), interval=70, blit=True) 
 anim.save('moveArm.gif', writer='imagemagick')
 # plt.show()

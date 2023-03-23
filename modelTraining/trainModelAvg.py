@@ -69,17 +69,17 @@ for curr_array in data:
 # SHOW THE SEPARATION BETWEEN FEATURES #################################
 #
 
-# for index_index in range(0, TRAINING_DATA_COUNT):
-#     for i in extension_startindexes[index_index]:
-#         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'green')
-#     for i in flexion_startindexes[index_index]:
-#         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'red')
-#     for i in sustain_startindexes[index_index]:
-#         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'purple')
-#     for i in rest_startindexes[index_index]:
-#         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
-#     plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
-    # plt.show()
+for index_index in range(0, TRAINING_DATA_COUNT):
+    for i in extension_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'green')
+    for i in flexion_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'red')
+    for i in sustain_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'purple')
+    for i in rest_startindexes[index_index]:
+        plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
+    plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
+    plt.show()
 
 
 # GENERATE FEATURE ARRAYS
@@ -131,6 +131,7 @@ for i in range(0, REST_STOP_TRAIN):
     LABEL.append(sustain)
 # print(f'features: {features}')
 # print(f'LABEL: {LABEL}')
+
 #
 #
 # INIT MODEL AND FIT FEATURES/LABELS #################################
@@ -180,11 +181,11 @@ grid_predictions = grid.predict(X)
 print(confusion_matrix(answ,grid_predictions))
 print(classification_report(answ,grid_predictions))
 
-c_code = port(grid.best_estimator_)
-with open("/Users/nikol/Desktop/main/MotionClassifier.h",'w') as f:
-    f.write(c_code)
+# c_code = port(grid.best_estimator_)
+# with open("/Users/nikol/Desktop/main/MotionClassifier.h",'w') as f:
+#     f.write(c_code)
 # print(c_code)
 
-pikl_fn = 'trained_modelAVG.sav'
-pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
-print('MODEL SAVED TO PICKLE FILE')
+# pikl_fn = 'trained_modelAVG.sav'
+# pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
+# print('MODEL SAVED TO PICKLE FILE')
