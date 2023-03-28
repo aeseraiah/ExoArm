@@ -29,8 +29,8 @@ void setup() {
 }
 
 void loop() {
-  windowedClassifier();
-  // testServo();
+  // windowedClassifier();
+  testServo();
 }
 
 float ema(int exp, float actual, float alpha){
@@ -40,10 +40,11 @@ float ema(int exp, float actual, float alpha){
 void driveServo(int pred){
 
   int SERV_PIN = 9;   // PWM pin
-  int SERV_MIN = 52;   // minimum servo angle FLEXION
-  int SERV_MAX = 80; // maximum sevo angle EXTENSION
+  int SERV_MIN = 20;   // minimum servo angle FLEXION
+  int SERV_MAX = 160; // maximum sevo angle EXTENSION
 
-  unsigned long dt_ms = 250; // 16 Hz
+  // unsigned long dt_ms = 250; // 16 Hz
+  unsigned long dt_ms = 1500; // 16 Hz
 
   int actual;
 
@@ -117,7 +118,7 @@ void windowedClassifier() {
     ema_actual = ema(val, actual, 0.5);
     actual = ema_actual;
     // ema_actual = val;
-    // Serial.println(ema_actual);
+    Serial.println(ema_actual);
     if(((gap + ema_actual) < prev_i) || ((-gap + ema_actual) > prev_i)){ // IF ACTION MIGHT BE HAPPENING
       for(int i = 0; i < window; i++) {
         // sensorWindow[i] = analogRead(analogInPin); // save signal, not AVG
@@ -125,7 +126,7 @@ void windowedClassifier() {
         ema_actual = ema(val, actual, 0.5);
         // ema_actual = val;
         // Serial.println("COLLECTING");
-        // Serial.println(ema_actual);
+        Serial.println(ema_actual);
         sensorWindow += ema_actual; // running sum, AVG
         actual = ema_actual;
         delay(30);
@@ -142,7 +143,7 @@ void windowedClassifier() {
 
       // OUTPUT DIGITAL SIGNAL TO SERVO/ LINEAR ACTUATION
 
-      Serial.println(pred_arg);
+      // Serial.println(pred_arg);
       if (prediction == FLX){
         if(pred_arg > 600.){
           driveServo(prediction);

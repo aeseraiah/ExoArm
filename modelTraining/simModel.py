@@ -11,7 +11,8 @@ AVG_en = 1 # 0 for non avg model, 1 for avg model
 #       Implement Kalman Filtering into Real Time Actuation
 #       Implement a modeling simulation to view what is to be predicted of the arm's movement
 
-test_file = '../data/CoolTerm Capture 2023-02-07 10-29-08.txt'
+# test_file = '../data/CoolTerm Capture 2023-02-07 10-29-08.txt'
+test_file = '../data/lpdata/CoolTerm Capture 2023-03-28 10-41-00.txt'
 
 L = 1 # LENGTH OF ARM IN CM
 

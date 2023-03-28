@@ -16,11 +16,14 @@ def Average(lst):
 #  SPECIFY NUMBER OF TRAINING DATA FILES #################################
 #
 
-TRAINING_DATA_COUNT = 6
+TRAINING_DATA_COUNT = 1
+# TRAINING_DATA_COUNT = 6
+
 window_size = 40
 print(f'window size: {window_size}')
 
-excel_file = "../data/filenames-indexes.xlsx"
+excel_file = "../data/filenames-indexes_lpfilter.xlsx"
+# excel_file = "../data/filenames-indexes.xlsx"
 filenames = []
 
 # GET EACH FILENAME AND CORRESPONDING INDEXES
@@ -186,6 +189,6 @@ print(classification_report(answ,grid_predictions))
 #     f.write(c_code)
 # print(c_code)
 
-# pikl_fn = 'trained_modelAVG.sav'
-# pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
-# print('MODEL SAVED TO PICKLE FILE')
+pikl_fn = 'trained_modelAVG.sav'
+pickle.dump(grid.best_estimator_, open(pikl_fn, 'wb'))
+print('MODEL SAVED TO PICKLE FILE')
