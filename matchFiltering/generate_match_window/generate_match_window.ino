@@ -155,9 +155,9 @@ void mem_catch(char command)
   }
 
   // How far we need to shift
-  // - Positive val means pulse is lagging behind, and must be left shifted
-  // - Negative val means pulse is too far ahead, and must be right shifted
-  offset = max_ind - LINEUP;
+  // - Positive val means pulse is too far ahead, and must be right shifted
+  // - Negative val means pulse is lagging behind, and must be left shifted
+  offset = LINEUP - max_ind;
 
   switch (command)
   {
@@ -165,12 +165,14 @@ void mem_catch(char command)
       i = 0;
       for (addr = ADDR_FLO; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
       {
-        // If the wave is shifted right, extrapolate beginning values
+        // If the wave is shifted right (offset positive)
+        // Extrapolate beginning values
         if (i < offset)
         {
           emg = emg_arr[0];
         }
-        // Else if the wave is shifted left, extrapolate end values
+        // Else if the wave is shifted left (offset negative)
+        // Extrapolate end values
         else if (i > (LENGTH - 1 + offset))
         {
           emg = emg_arr[LENGTH - 1];
@@ -178,7 +180,7 @@ void mem_catch(char command)
         // Iterate through the inner values, with actual pulse data
         else
         {
-          emg = emg_arr[i + offset];
+          emg = emg_arr[i - offset];
         }
         i++;
 
@@ -201,12 +203,14 @@ void mem_catch(char command)
       i = 0;
       for (addr = ADDR_ELO; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
       {
-        // If the wave is shifted right, extrapolate beginning values
+        // If the wave is shifted right (offset positive)
+        // Extrapolate beginning values
         if (i < offset)
         {
           emg = emg_arr[0];
         }
-        // Else if the wave is shifted left, extrapolate end values
+        // Else if the wave is shifted left (offset negative)
+        // Extrapolate end values
         else if (i > (LENGTH - 1 + offset))
         {
           emg = emg_arr[LENGTH - 1];
@@ -214,7 +218,7 @@ void mem_catch(char command)
         // Iterate through the inner values, with actual pulse data
         else
         {
-          emg = emg_arr[i + offset];
+          emg = emg_arr[i - offset];
         }
         i++;
 
