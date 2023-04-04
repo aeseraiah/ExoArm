@@ -4,8 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
-import pickle
 import math
+from scipy.signal import find_peaks
 
 
 #
@@ -111,26 +111,63 @@ rest = 3
 # GENERATE FLEXION FILTER
 
 FLEX_FILTER = np.arange(0,window_size)
+A_FLEX_FILTER = np.arange(0,window_size)
+
 for data in FLEXION_DATA:
     for i, el in enumerate(data):
         FLEX_FILTER[i] += el
+    peaks, _ = find_peaks(data, height= 330)
+    print(peaks)
+    # plt.plot(peaks[0], data[peaks[0]], 'o')
+    if peaks:
+        peak = peaks[0]
+        # plt.plot(np.arange(0,len(data)) - peak, data, color = 'r')
+        new_wave = []
+        if peak > 50:
+            gap = peak - 50
+            new_wave = data[gap:]
+            np.append(new_wave , (np.zeros(gap).tolist()))
+            print(new_wave)
+            # plt.plot(new_wave)
+            # plt.show()
+
+        elif peak <= 50:
+            gap = 50 - peak
+            new_wave = np.zeros(gap)
+            np.append(new_wave,data[:100-gap])
+            plt.plot(new_wave)
+            plt.show()
+
+
+
+# plt.show()
 for i, data in enumerate(FLEX_FILTER):
     FLEX_FILTER[i] = data/len(FLEXION_DATA)
+# plt.plot(FLEX_FILTER, color = 'b')
+# plt.show()
 
-for d in FLEXION_DATA:
-    plt.plot(np.convolve(d, FLEX_FILTER))
-plt.title("CONVOLUTION OF FLEXION FILTERS \nWITH KNOWN FLEXION DATA")
-plt.show()
 
 # GENERATE EXTENSION FILTER
 
-EXT_FILTER = np.arange(0,window_size)
-for data in EXTENSION_DATA:
-    for i, el in enumerate(data):
-        EXT_FILTER[i] += el
-for i, data in enumerate(EXT_FILTER):
-    EXT_FILTER[i] = data/len(EXTENSION_DATA)
+# EXT_FILTER = np.arange(0,window_size)
+# for data in EXTENSION_DATA:
+#     for i, el in enumerate(data):
+#         EXT_FILTER[i] += el
+#     plt.plot(data, color = 'r')
+# for i, data in enumerate(EXT_FILTER):
+#     EXT_FILTER[i] = data/len(EXTENSION_DATA)
+# plt.plot(EXT_FILTER, color = 'b')
+# plt.show()
 
+pred = []
+# for d in FLEXION_DATA:
+    # pred += [np.convolve(d,FLEX_FILTER, mode = 'valid')]
+    # plt.plot(np.convolve(d, EXT_FILTER))
+    # plt.plot(np.convolve(d, FLEX_FILTER))
+
+# plt.plot(pred)
+# plt.title("CONVOLUTION OF FLEXION FILTERS \nWITH KNOWN EXTENSION DATA")
+# plt.show()
 
 #
 #   MATCH FILTERING TO CLASSIFY A FILE/MODELING
@@ -194,7 +231,7 @@ while((idx+window_size)<len(emg_data)):
         # MAKE PREDICTION
         fc = np.convolve(window, FLEX_FILTER)
         ec = np.convolve(window, EXT_FILTER)
-        plt.plot(fc)
+        # plt.plot(fc)
         # print(f"AVERAGE CONV FOR FLEX {np.average(fc)}")
         # print(f"AVERAGE CONV FOR EXT {np.average(ec)}")
         # plt.show()
@@ -207,7 +244,7 @@ while((idx+window_size)<len(emg_data)):
     else:
         prev_i = emg_data[idx]
         idx+=1
-plt.show()
+# plt.show()
 print(f'NUMBER OF FEATURES COUNTED {count_features}')
 
 curr_pos = []

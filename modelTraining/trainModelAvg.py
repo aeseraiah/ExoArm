@@ -66,7 +66,7 @@ for curr_array in data:
 # plt.title("ALL TRAINING SIGNALS")
 # plt.show()
 
-# plt.plot(np_data[2])
+plt.plot(data[0])
 
 # 
 # SHOW THE SEPARATION BETWEEN FEATURES #################################
@@ -82,6 +82,8 @@ for index_index in range(0, TRAINING_DATA_COUNT):
     for i in rest_startindexes[index_index]:
         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
     plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
+    plt.xlabel("(n) point")
+    plt.ylabel("Magnitude of EMG (mV)")
     plt.show()
 
 
