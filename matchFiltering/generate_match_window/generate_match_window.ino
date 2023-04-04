@@ -13,7 +13,7 @@
 int BASE = 0;
 int LENGTH = 100;
 
-int ADDR_FN  = 0
+int ADDR_FN  = 0;
 int ADDR_FLO = ADDR_FN + sizeof(USE_TYPE);
 int ADDR_FHI = ADDR_FLO + (LENGTH - 1) * sizeof(USE_TYPE);
 
@@ -54,7 +54,7 @@ void mem_wipe()
 {
   for (int i = 0; i < EEPROM.length() ; i++)
   {
-    EEPROM.update(i, 0)
+    EEPROM.update(i, 0);
   }
 }
 
@@ -126,7 +126,7 @@ void mem_catch_noalign(char command)
       EEPROM.put(ADDR_EN, N);        
       break;
 
-    case default:
+    default:
       return;
       break;
   }
@@ -233,7 +233,7 @@ void mem_catch(char command)
 
       break;
 
-    case default:
+    default:
       return;
       break;
   }
