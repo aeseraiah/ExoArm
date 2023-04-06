@@ -21,7 +21,7 @@ int ADDR_EN = ADDR_FHI + sizeof(USE_TYPE);
 int ADDR_ELO = ADDR_EN + sizeof(USE_TYPE);
 int ADDR_EHI = ADDR_ELO + (LENGTH - 1) * sizeof(USE_TYPE);
 
-int LINEUP = 40;
+int LINEUP = 50;
 ///////////////////////////////////////////////////////
 
 int addr; 
@@ -54,8 +54,13 @@ void mem_wipe()
 {
   for (int i = 0; i < EEPROM.length() ; i++)
   {
-    EEPROM.update(i, 0);
+    EEPROM.update(i, -1);
   }
+
+  EEPROM.put(ADDR_FN, (unsigned USE_TYPE) 0);
+  EEPROM.put(ADDR_EN, (unsigned USE_TYPE) 0);
+
+  Serial.println("Done wipe.");
 }
 
 void mem_return()
@@ -135,42 +140,48 @@ void mem_catch_noalign(char command)
 void mem_catch(char command)
 {
   int emg_arr[LENGTH];
-  int max_emg = -1000;
-  int max_ind = -1;
+  int lim_emg;
+  int lim_ind;
   int i;
-
   int offset;
-
-  for (i = 0; i < LENGTH; i++)
-  {
-    emg_arr[i] = analogRead(in_pin);
-
-    if (emg_arr[i] > max_emg)
-    {
-      max_emg = emg_arr[i];
-      max_ind = i;
-    }
-
-    delay(dt_ms);
-  }
-
-  // How far we need to shift
-  // - Positive val means pulse is lagging behind, and must be left shifted
-  // - Negative val means pulse is too far ahead, and must be right shifted
-  offset = max_ind - LINEUP;
 
   switch (command)
   {
     case 'f':
+
+      lim_ind = -1;
+      lim_emg = -1000;
+
+      // Take data points, hold index of global maximum
+      for (i = 0; i < LENGTH; i++)
+      {
+        emg_arr[i] = analogRead(in_pin);
+
+        if (emg_arr[i] > lim_emg)
+        {
+          lim_emg = emg_arr[i];
+          lim_ind = i;
+        }
+
+        delay(dt_ms);
+      }
+
+      // How far we need to shift
+      // - Positive val means pulse is too far ahead, and must be right shifted
+      // - Negative val means pulse is lagging behind, and must be left shifted
+      offset = LINEUP - lim_ind;
+
       i = 0;
       for (addr = ADDR_FLO; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
       {
-        // If the wave is shifted right, extrapolate beginning values
+        // If the wave is shifted right (offset positive)
+        // Extrapolate beginning values
         if (i < offset)
         {
           emg = emg_arr[0];
         }
-        // Else if the wave is shifted left, extrapolate end values
+        // Else if the wave is shifted left (offset negative)
+        // Extrapolate end values
         else if (i > (LENGTH - 1 + offset))
         {
           emg = emg_arr[LENGTH - 1];
@@ -178,7 +189,7 @@ void mem_catch(char command)
         // Iterate through the inner values, with actual pulse data
         else
         {
-          emg = emg_arr[i + offset];
+          emg = emg_arr[i - offset];
         }
         i++;
 
@@ -189,24 +200,51 @@ void mem_catch(char command)
 
         val += (short) emg;
         val /= N + 1;
-        N += 1;
 
         EEPROM.put(addr, val);
-        EEPROM.put(ADDR_FN, N); 
       }
 
+      N += 1;
+      EEPROM.put(ADDR_FN, N); 
+
+      Serial.println("Done F.");
       break;
 
     case 'e':
+
+      lim_ind = -1;
+      lim_emg = 1000;
+
+      // Take data, hold index of global minimum
+      for (i = 0; i < LENGTH; i++)
+      {
+        emg_arr[i] = analogRead(in_pin);
+
+        if (emg_arr[i] < lim_emg)
+        {
+          lim_emg = emg_arr[i];
+          lim_ind = i;
+        }
+
+        delay(dt_ms);
+      }
+
+      // How far we need to shift
+      // - Positive val means pulse is too far ahead, and must be right shifted
+      // - Negative val means pulse is lagging behind, and must be left shifted
+      offset = LINEUP - lim_ind;
+
       i = 0;
       for (addr = ADDR_ELO; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
       {
-        // If the wave is shifted right, extrapolate beginning values
+        // If the wave is shifted right (offset positive)
+        // Extrapolate beginning values
         if (i < offset)
         {
           emg = emg_arr[0];
         }
-        // Else if the wave is shifted left, extrapolate end values
+        // Else if the wave is shifted left (offset negative)
+        // Extrapolate end values
         else if (i > (LENGTH - 1 + offset))
         {
           emg = emg_arr[LENGTH - 1];
@@ -214,7 +252,7 @@ void mem_catch(char command)
         // Iterate through the inner values, with actual pulse data
         else
         {
-          emg = emg_arr[i + offset];
+          emg = emg_arr[i - offset];
         }
         i++;
 
@@ -225,12 +263,14 @@ void mem_catch(char command)
 
         val += (short) emg;
         val /= N + 1;
-        N += 1;
 
         EEPROM.put(addr, val);
-        EEPROM.put(ADDR_EN, N); 
       }
 
+      N += 1;
+      EEPROM.put(ADDR_EN, N); 
+
+      Serial.println("Done E.");
       break;
 
     default:
@@ -266,6 +306,7 @@ void loop()
         {
           mem_catch_noalign(in_char);
         }
+
         break;
     }
   }
