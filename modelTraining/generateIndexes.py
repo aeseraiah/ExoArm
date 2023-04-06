@@ -84,7 +84,7 @@ def gen_index(MARKER_FILE, SHEET_NUMBER, data_file, window):
     print("indexes saved to file")
 
 if __name__ == '__main__':
-    MARKER_FILE = 'markerData/10:41:25_03:28:23.csv'  # CHANGE EACH TIME, SHOULD NOT WORK O/W
-    SHEET_NUMBER = 'Sheet1'                  # CHANGE EACH TIME, SHOULD NOT WORK O/W
-    data_file = '../data/lpdata/CoolTerm Capture 2023-03-28 10-41-00.txt'           # CHANGE EACH TIME, SHOULD NOT WORK O/W
+    MARKER_FILE = 'markerData/15:38:58_03:28:23electrode.csv'  # CHANGE EACH TIME, SHOULD NOT WORK O/W
+    SHEET_NUMBER = 'Sheet2'                  # CHANGE EACH TIME, SHOULD NOT WORK O/W
+    data_file = '../data/electrodeData/CoolTerm Capture 2023-03-28 15-39-11.txt'           # CHANGE EACH TIME, SHOULD NOT WORK O/W
     gen_index(MARKER_FILE,SHEET_NUMBER,data_file,window = 90)
