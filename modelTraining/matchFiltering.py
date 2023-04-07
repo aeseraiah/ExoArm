@@ -9,8 +9,8 @@ from scipy.signal import find_peaks
 from scipy.signal import convolve
 
 def align_signal(data):
-        # may have to align for flex and for extend
-        # convolve and take the best of the two
+    # may have to align for flex and for extend
+    # convolve and take the best of the two
 
     ## ALIGN FOR FLEXION
     max_height = PEAK_HEIGHT_FLX
@@ -136,6 +136,8 @@ def generate_data_lists(excel_file, TRAINING_DATA_COUNT):
     return FLEXION_DATA, EXTENSION_DATA, REST_DATA, SUSTAIN_DATA
 
 def match_filter_prediction(d):
+    # THIS IS CONVERTED TO ARDUINO CODE/CPP
+
     flx_aligned, ext_aligned = align_signal(d) # ALIGN AS YOU CONVOLVE
     out_flx_aligned = convolve(flx_aligned, FLEX_FILTER, mode = 'full') # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
     out_ext_aligned = convolve(ext_aligned, EXT_FILTER, mode = 'full')
@@ -160,7 +162,7 @@ def match_filter_prediction(d):
     print(DIFF_FLX_RST)
     print(DIFF_EXT_RST)
     # if (DIFF_FLX_RST < AVG_DIFF) and (DIFF_EXT_RST < AVG_DIFF):
-    if AVG_DIFF < 1000000:
+    if AVG_DIFF < POOR_PREDICTION_THRESHOLD:
         PRED = MAX_RST
 
     flexion = 0
@@ -195,7 +197,7 @@ MID = window_size//2 # AT WHAT POINT TO ALIGN PEAKS, 50 is halfway into window
 PEAK_HEIGHT_FLX = 335
 PEAK_HEIGHT_EXT = 295 # WILL BE NEGATED
 
-POOR_PREDICTION_THRESHOLD = 0
+POOR_PREDICTION_THRESHOLD = 1000000
 
 
 # excel_file = "../data/filenames-indexes_lpfilter.xlsx" # FOR TRAINING
