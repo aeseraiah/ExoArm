@@ -135,6 +135,51 @@ def generate_data_lists(excel_file, TRAINING_DATA_COUNT):
 
     return FLEXION_DATA, EXTENSION_DATA, REST_DATA, SUSTAIN_DATA
 
+def match_filter_prediction(d):
+    flx_aligned, ext_aligned = align_signal(d) # ALIGN AS YOU CONVOLVE
+    out_flx_aligned = convolve(flx_aligned, FLEX_FILTER, mode = 'full') # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
+    out_ext_aligned = convolve(ext_aligned, EXT_FILTER, mode = 'full')
+    out_rst_aligned = convolve(ext_aligned, RST_FILTER, mode = 'full') # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
+
+    plt.plot(out_flx_aligned, 'r')
+    plt.plot(out_ext_aligned, 'b')
+    plt.plot(out_rst_aligned, 'y')
+
+    MAX_FLX = np.max(out_flx_aligned)
+    MAX_EXT = np.max(out_ext_aligned)
+    MAX_RST = np.max(out_rst_aligned)
+
+    PRED = np.max([MAX_FLX, MAX_EXT])
+
+    print(f'\n{MAX_FLX:.2e}, {MAX_EXT:.2e}, {MAX_RST:.2e}')
+    AVG_DIFF = np.average(np.abs(np.diff([MAX_FLX, MAX_EXT, MAX_RST])))
+    print(f'AVG DIFFERENCE: {AVG_DIFF}')
+
+    DIFF_EXT_RST = np.diff([MAX_RST, MAX_EXT])
+    DIFF_FLX_RST = np.diff([MAX_RST, MAX_FLX])
+    print(DIFF_FLX_RST)
+    print(DIFF_EXT_RST)
+    # if (DIFF_FLX_RST < AVG_DIFF) and (DIFF_EXT_RST < AVG_DIFF):
+    if AVG_DIFF < 1000000:
+        PRED = MAX_RST
+
+    flexion = 0
+    extension = 1
+    sustain = 2
+    rest = 3
+
+    if PRED == MAX_FLX:
+        print(f'PREDICT FLX {np.max(out_flx_aligned):.2e}')
+        return flexion
+    elif PRED == MAX_EXT:
+        print(f'PREDICT EXT {np.max(out_flx_aligned):.2e}')
+        return extension
+    elif PRED == MAX_RST: # REST CASE
+        print(f'PREDICT RST {np.max(out_rst_aligned):.2e}')
+        return rest
+    else:
+        return -1
+
 #
 #  SPECIFY NUMBER OF TRAINING DATA FILES #################################
 #
@@ -155,14 +200,14 @@ POOR_PREDICTION_THRESHOLD = 0
 
 # excel_file = "../data/filenames-indexes_lpfilter.xlsx" # FOR TRAINING
 excel_file = "../data/filenames-indexes.xlsx" # FOR TRAINING
-TRAINING_DATA_COUNT = 1
+TRAINING_DATA_COUNT = 1 # WILL DO THE FIRST ONE IN THE EXCEL SPREADSHEET
 test_file_realtime = '../data/CoolTerm Capture 2023-02-13 18-31-26.txt' # FOR MODELING REALLY GOOD ACCURACY
 
 
 filenames = []
 
 FLEXION_DATA, EXTENSION_DATA, REST_DATA, SUSTAIN_DATA = generate_data_lists(excel_file, TRAINING_DATA_COUNT)
-REST_DATA += SUSTAIN_DATA # COMBINE THE TWO
+REST_DATA += SUSTAIN_DATA # COMBINE THE TWO, SAME CONCEPT
 
 
 # classifier key
@@ -172,7 +217,7 @@ sustain = 2
 rest = 3
 
 
-# GENERATE FLEXION FILTER
+# ---------GENERATE FLEXION FILTER
 
 FLEX_FILTER = np.arange(0,window_size)
 A_FLEX_FILTER = np.arange(0,window_size)
@@ -184,14 +229,14 @@ for y, data in enumerate(FLEXION_DATA):
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
     flex_new_wave, _ = align_signal(data)
-    # plt.plot(flex_new_wave)
+    plt.plot(flex_new_wave)
     for i, el in enumerate(flex_new_wave):
         A_FLEX_FILTER[i] += el
 
-# plt.title("ALL FLEX SIGNALS")
-# plt.show() 
+plt.title("ALL FLEX SIGNALS")
+plt.show() 
 
-# GENERATE EXTENSION FILTER
+# ---------GENERATE EXTENSION FILTER
 
 EXT_FILTER = np.arange(0,window_size)
 A_EXT_FILTER = np.arange(0,window_size)
@@ -203,13 +248,14 @@ for y, data in enumerate(EXTENSION_DATA):
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
     _, ext_new_wave = align_signal(data)
-    # plt.plot(ext_new_wave)
+    plt.plot(ext_new_wave)
     for i, el in enumerate(ext_new_wave):
         A_EXT_FILTER[i] += el
-# plt.title("ALL EXT SIGNALS")
-# plt.show() 
+plt.title("ALL EXT SIGNALS")
+# plt.ylim((250,500))
+plt.show() 
 
-# GENERATE REST FILTER
+# ---------GENERATE REST FILTER
 
 RST_FILTER = np.arange(0,window_size)
 A_RST_FILTER = np.arange(0,window_size)
@@ -229,10 +275,11 @@ for y, data in enumerate(REST_DATA):
         A_RST_FILTER[i] += el
 
 # plt.title("ALL RST SIGNALS")
+# plt.ylim((250,500))
 # plt.show() 
 
 #
-#  AVERAGE FILTERS
+# ---------AVERAGE FILTERS
 #
 for i, data in enumerate(FLEX_FILTER):
     FLEX_FILTER[i] = data/len(FLEXION_DATA)
@@ -247,170 +294,94 @@ for i, data in enumerate(RST_FILTER):
     A_RST_FILTER[i] = A_RST_FILTER[i]/len(REST_DATA)
 
 #
-# PLOT FILTERS FOR FLEXION & EXTENSION
+# ---------PLOT FILTERS FOR FLEXION, EXTENSION, REST
 #
 
 plt.plot(FLEX_FILTER, color = 'b')
 plt.plot(A_FLEX_FILTER, color = 'r')
 plt.legend(["UNALIGNED", "ALIGNED"])
 plt.title("FLEXION FILTERS")
-plt.ylim((250,350))
+plt.ylim((200,800))
 plt.show()
 
 plt.plot(EXT_FILTER, color = 'b')
 plt.plot(A_EXT_FILTER, color = 'r')
 plt.legend(["UNALIGNED", "ALIGNED"])
 plt.title("EXTENSION FILTERS")
-plt.ylim((250,350))
+plt.ylim((200,800))
 plt.show()
 
 plt.plot(RST_FILTER, color = 'b')
 plt.plot(A_RST_FILTER, color = 'r')
 plt.legend(["UNALIGNED", "ALIGNED"])
 plt.title("REST FILTERS")
-plt.ylim((250,350))
+plt.ylim((200,800))
 plt.show()
 
 
 #
-#   TEST PREDICTIONS WITH SELECTED DATA, NOT REAL-TIME SIMULATION
+# ---------TEST PREDICTIONS WITH SELECTED DATA, NOT REAL-TIME SIMULATION
 #
 
 pred = []
-PASS = 0
-FAIL = 0
+PASS = 0 # KEEP TRACK OF PASS/FAIL FOR ACCURATION
+FAIL = 0 # KEEP TRACK OF PASS/FAIL FOR ACCURATION
 COUNT = len(EXTENSION_DATA) + len(FLEXION_DATA) + len(REST_DATA)
 
-##
-## PROBLEM IS WITH DIFFERENTIATING BW REST AND OTHER CLASSIFICATIONS...
-##
 
-
-print('\nEXTENSION DATA')
+print('\n\nEXTENSION DATA')
 for d in EXTENSION_DATA:
-    # pred += [np.convolve(d,FLEX_FILTER, mode = 'valid')]
-    # plt.plot(np.convolve(d, EXT_FILTER))
-    flx_aligned, ext_aligned = align_signal(d) # ALIGN AS YOU CONVOLVE
-    out_flx_aligned = convolve(flx_aligned, FLEX_FILTER, mode = 'full') # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
-    out_ext_aligned = convolve(ext_aligned, EXT_FILTER, mode = 'full')
-    out_rst_aligned = convolve(ext_aligned, RST_FILTER, mode = 'full') # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
-    
-    MAX_FLX = np.average(out_flx_aligned)
-    MAX_EXT = np.average(out_ext_aligned)
-    MAX_RST = np.average(out_rst_aligned)
 
-    # PRED = np.max([MAX_FLX, MAX_EXT, MAX_RST])
-    PRED = np.max([MAX_FLX, MAX_EXT]) # ONLY USE BELOW ALGORITHM TO PREDICT REST?
+    PRED = match_filter_prediction(d)
 
-    print(f'{MAX_FLX:.2e}, {MAX_EXT:.2e}, {MAX_RST:.2e}')
-    AVG_DIFF = np.average(np.abs(np.diff([MAX_FLX, MAX_EXT, MAX_RST])))
-    print(f'AVG DIFFERENCE: {AVG_DIFF}')
-
-    DIFF_EXT_RST = np.diff([MAX_RST, MAX_EXT])
-    DIFF_FLX_RST = np.diff([MAX_RST, MAX_FLX])
-    print(DIFF_FLX_RST)
-    print(DIFF_EXT_RST)
-    if (DIFF_FLX_RST < AVG_DIFF) and (DIFF_EXT_RST < AVG_DIFF):
-        PRED = MAX_RST
-
-    if PRED == MAX_FLX:
-        print(f'FAIL: PREDICT FLX {np.max(out_flx_aligned):.2e}')
-        FAIL += 1
-    elif PRED == MAX_EXT:
-        print(f'PASS: PREDICT EXT {np.max(out_flx_aligned):.2e}')
+    if PRED == extension:
+        print(f"PASS: PREDICT EXT")
         PASS += 1
-    elif PRED == MAX_RST: # REST CASE
-        print(f'FAIL: PREDICT RST {np.max(out_rst_aligned):.2e}')
+    elif PRED == flexion:
+        print(f'FAIL: PREDICTION FLX')
+        FAIL += 1
+    elif PRED == rest:
+        print(f'FAIL: PREDICTION RST')
         FAIL += 1
 
-    plt.plot(out_flx_aligned, 'r')
-    plt.plot(out_ext_aligned, 'b')
-    plt.plot(out_rst_aligned, 'y')
-    plt.title("FLX (red) , EXT (blue) PREDICTION & RST (yellow) \n on EXTENSION DATA ")
+plt.title("FLX (red) , EXT (blue) & RST (yellow) \n on EXTENSION DATA ")
 plt.show()
 
-print('\nREST DATA')
+print('\n\nREST DATA')
 for d in REST_DATA:
-    # pred += [np.convolve(d,FLEX_FILTER, mode = 'valid')]
-    # plt.plot(np.convolve(d, EXT_FILTER))
-    flx_aligned, ext_aligned = align_signal(d) # ALIGN AS YOU CONVOLVE
-    out_flx_aligned = convolve(flx_aligned, FLEX_FILTER, mode = 'full') # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
-    out_ext_aligned = convolve(ext_aligned, EXT_FILTER, mode = 'full')
-    out_rst_aligned = convolve(ext_aligned, RST_FILTER, mode = 'full') # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
 
-    MAX_FLX = np.average(out_flx_aligned) # MAX OR AVERAGE? TRYING AVERAGE
-    MAX_EXT = np.average(out_ext_aligned)
-    MAX_RST = np.average(out_rst_aligned)
+    PRED = match_filter_prediction(d)
 
-    PRED = np.max([MAX_FLX, MAX_EXT])
 
-    print(f'{MAX_FLX:.2e}, {MAX_EXT:.2e}, {MAX_RST:.2e}')
-    AVG_DIFF = np.average(np.abs(np.diff([MAX_FLX, MAX_EXT, MAX_RST])))
-    print(f'AVG DIFFERENCE: {AVG_DIFF}')
-
-    DIFF_EXT_RST = np.diff([MAX_RST, MAX_EXT])
-    DIFF_FLX_RST = np.diff([MAX_RST, MAX_FLX])
-    print(DIFF_FLX_RST)
-    print(DIFF_EXT_RST)
-    if (DIFF_FLX_RST < AVG_DIFF) and (DIFF_EXT_RST < AVG_DIFF):
-        PRED = MAX_RST
-
-    if PRED == MAX_FLX:
-        print(f'FAIL: PREDICT FLX {np.max(out_flx_aligned):.2e}')
+    if PRED == extension:
+        print(f"FAIL: PREDICT EXT")
         FAIL += 1
-    elif PRED == MAX_EXT:
-        print(f'FAIL: PREDICT EXT {np.max(out_flx_aligned):.2e}')
+    elif PRED == flexion:
+        print(f'FAIL: PREDICTION FLX')
         FAIL += 1
-    elif PRED == MAX_RST: # REST CASE
-        print(f'PASS: PREDICT RST {np.max(out_rst_aligned):.2e}')
+    elif PRED == rest:
+        print(f'PASS: PREDICTION RST')
         PASS += 1
 
-    plt.plot(out_flx_aligned, 'r')
-    plt.plot(out_ext_aligned, 'b')
-    plt.plot(out_rst_aligned, 'y')
-    plt.title("FLX (red) , EXT (blue) PREDICTION & RST (yellow) \n on REST DATA ")
+plt.title("FLX (red) , EXT (blue) & RST (yellow) \n on REST DATA ")
 plt.show()
 
-print('\nFLEXION DATA')
+print('\n\nFLEXION DATA')
 for d in FLEXION_DATA:
-    # pred += [np.convolve(d,FLEX_FILTER, mode = 'valid')]
-    # plt.plot(np.convolve(d, EXT_FILTER))
-    flx_aligned, ext_aligned = align_signal(d) # ALIGN AS YOU CONVOLVE
-    out_flx_aligned = convolve(flx_aligned, FLEX_FILTER, mode = 'full') # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
-    out_ext_aligned = convolve(ext_aligned, EXT_FILTER, mode = 'full')
-    out_rst_aligned = convolve(ext_aligned, RST_FILTER, mode = 'full') # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
 
-    MAX_FLX = np.average(out_flx_aligned)
-    MAX_EXT = np.average(out_ext_aligned)
-    MAX_RST = np.average(out_rst_aligned)
+    PRED = match_filter_prediction(d)
 
-    PRED = np.max([MAX_FLX, MAX_EXT])
-
-    print(f'{MAX_FLX:.2e}, {MAX_EXT:.2e}, {MAX_RST:.2e}')
-    AVG_DIFF = np.average(np.abs(np.diff([MAX_FLX, MAX_EXT, MAX_RST])))
-    print(f'AVG DIFFERENCE: {AVG_DIFF}')
-
-    DIFF_EXT_RST = np.diff([MAX_RST, MAX_EXT])
-    DIFF_FLX_RST = np.diff([MAX_RST, MAX_FLX])
-    print(DIFF_FLX_RST)
-    print(DIFF_EXT_RST)
-    if (DIFF_FLX_RST < AVG_DIFF) and (DIFF_EXT_RST < AVG_DIFF):
-        PRED = MAX_RST
-
-    if PRED == MAX_FLX:
-        print(f'PASS: PREDICT FLX {np.max(out_flx_aligned):.2e}')
+    if PRED == extension:
+        print(f"FAIL: PREDICT EXT")
+        FAIL += 1
+    elif PRED == flexion:
+        print(f'PASS: PREDICTION FLX')
         PASS += 1
-    elif PRED == MAX_EXT:
-        print(f'FAIL: PREDICT EXT {np.max(out_flx_aligned):.2e}')
-        FAIL += 1
-    elif PRED == MAX_RST: # REST CASE
-        print(f'FAIL: PREDICT RST {np.max(out_rst_aligned):.2e}')
+    elif PRED == rest:
+        print(f'FAIL: PREDICTION RST')
         FAIL += 1
 
-    plt.plot(out_flx_aligned, 'r')
-    plt.plot(out_ext_aligned, 'b')
-    plt.plot(out_rst_aligned, 'y')
-    plt.title("FLX (red) , EXT (blue) PREDICTION & RST (yellow) \n on FLEXION DATA ")
+plt.title("FLX (red), EXT (blue) & RST (yellow) \n on FLEXION DATA ")
 plt.show()
 
 print(f'PASS/FAIL: {PASS}/{FAIL}')
@@ -419,7 +390,7 @@ print(f'ACCURACY: {100*(PASS/COUNT):.2f}%')
 
 
 #
-#   MATCH FILTERING TO CLASSIFY A FILE/MODELING LIKE REAL-TIME
+# ---------MATCH FILTERING TO CLASSIFY A FILE/MODELING LIKE REAL-TIME
 #
 
 L = 1 # LENGTH OF ARM IN CM
@@ -477,41 +448,19 @@ while((idx+window_size)<len(emg_data)):
         # print(f'WINDOW START: {idx}')
         window = emg_data[idx:idx+window_size]
         
-        flx_aligned, ext_aligned = align_signal(window) # ALIGN AS YOU CONVOLVE
-        out_flx_aligned = convolve(flx_aligned, FLEX_FILTER, mode = 'full') # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
-        out_ext_aligned = convolve(ext_aligned, EXT_FILTER, mode = 'full')
-        out_rst_aligned = convolve(ext_aligned, RST_FILTER, mode = 'full')
-
-
-
-        #
-        #       NEED TO UPDATE WITH ABOVE METHOD
-        #
-        MAX_FLX = np.max(out_flx_aligned)
-        MAX_EXT = np.max(out_ext_aligned)
-        MAX_RST = np.max(out_rst_aligned)
-
-        PRED = np.max([MAX_FLX, MAX_EXT, MAX_RST])
-
-        print(f'{MAX_FLX:.2e}, {MAX_EXT:.2e}, {MAX_RST:.2e}')
-
-        if PRED <= POOR_PREDICTION_THRESHOLD:
-            PRED = MAX_RST
+        PRED = match_filter_prediction(window)
             
-
-        if PRED == MAX_FLX:
-            print(f'XXXX: PREDICT FLX {np.max(out_flx_aligned):.2e}')
+        if PRED == flexion:
+            print(f'XXXX: PREDICT FLX')
             title = "PREDICT FLEXION"
-        elif PRED == MAX_EXT:
-            print(f'XXXX: PREDICT EXT {np.max(out_flx_aligned):.2e}')
+        elif PRED == extension:
+            print(f'XXXX: PREDICT EXT')
             title = "PREDICT EXTENSION"
-        elif PRED == MAX_RST: # REST CASE
-            print(f'XXXX: PREDICT RST {np.max(out_rst_aligned):.2e}')
+        elif PRED == rest: # REST CASE
+            print(f'XXXX: PREDICT RST')
             title = "PREDICT REST"
 
-        plt.plot(flx_aligned)
-        plt.plot(ext_aligned)
-        plt.legend(["FLEX", "EXTEND"])
+        plt.legend(["FLEX", "EXTEND", "REST"])
         plt.title(title)
         plt.show()
 
@@ -541,7 +490,7 @@ atstep = step
 
 # #
 # #
-# #   ANIMATION WORKFLOW
+# #---------ANIMATION WORKFLOW
 # #
 
 # traj += [-np.pi for i in range(0,10)] # DISTINGUISHABLE STARTING PT
