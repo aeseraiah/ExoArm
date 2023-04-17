@@ -1,4 +1,4 @@
-Port = usbserial-1410
+Port = usbserial-1420
 BaudRate = 9600
 DataBits = 8
 Parity = N
@@ -102,8 +102,8 @@ ChartXAutoLimits = false
 ChartYAutoLimits = false
 ChartXLimitMin = 0
 ChartXLimitMax = 1000
-ChartYLimitMin = -10
-ChartYLimitMax = 80
+ChartYLimitMin = -800
+ChartYLimitMax = 800
 ChartXDataColumn = 1
 ChartTimeReference = ElapsedTime
 ChartXAxisScaleRatio = 1

@@ -17,6 +17,7 @@ def align_signal(data):
     peaks, _ = find_peaks(data, height= max_height) # find maximum peak
     if len(peaks)>0:
         peak = peaks[0]
+        print(f'flx peak: {peak}')
         # plt.plot(np.arange(0,len(data)) - peak, data, color = 'r')
         if peak > MID:
             gap = peak - MID
@@ -37,6 +38,7 @@ def align_signal(data):
     peaks, _ = find_peaks([-val for val in data], height= -max_height) # negate data to find minimum
     if len(peaks)>0:
         peak = peaks[0]
+        print(f'ext peak: {peak}')
         # plt.plot(np.arange(0,len(data)) - peak, data, color = 'r')
         if peak > MID:
             gap = peak - MID
@@ -135,32 +137,48 @@ def generate_data_lists(excel_file, TRAINING_DATA_COUNT):
 
     return FLEXION_DATA, EXTENSION_DATA, REST_DATA, SUSTAIN_DATA
 
+def my_convolve(A, B):
+    CONVOLUTION = [0 for x in range(100)]
+    for i in range(100):
+        CONVOLUTION[i] = 0
+        for j in range(100):
+            CONVOLUTION[i] += (A[i-j] * B[j])
+        
+    return CONVOLUTION
+
+
 def match_filter_prediction(d):
     # THIS IS CONVERTED TO ARDUINO CODE/CPP
 
     flx_aligned, ext_aligned = align_signal(d) # ALIGN AS YOU CONVOLVE
-    out_flx_aligned = convolve(flx_aligned, FLEX_FILTER, mode = 'full') # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
-    out_ext_aligned = convolve(ext_aligned, EXT_FILTER, mode = 'full')
-    out_rst_aligned = convolve(ext_aligned, RST_FILTER, mode = 'full') # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
+    out_flx_aligned = my_convolve(flx_aligned, A_FLEX_FILTER) # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
+    out_ext_aligned = my_convolve(ext_aligned, A_EXT_FILTER)
+    out_rst_aligned = my_convolve(ext_aligned, A_RST_FILTER) # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
 
-    plt.plot(out_flx_aligned, 'r')
-    plt.plot(out_ext_aligned, 'b')
-    plt.plot(out_rst_aligned, 'y')
+    # print(f"FLX CONV {out_flx_aligned}")
+    # print(f"EXT CONV {out_ext_aligned}")
+    # print(f"RST CONV {out_rst_aligned}")
+    # plt.plot(out_flx_aligned, 'r')
+    # plt.plot(out_ext_aligned, 'b')
+    # plt.plot(out_rst_aligned, 'y')
 
-    MAX_FLX = np.max(out_flx_aligned)
-    MAX_EXT = np.max(out_ext_aligned)
-    MAX_RST = np.max(out_rst_aligned)
+    MAX_FLX = np.average(out_flx_aligned)
+    MAX_EXT = np.average(out_ext_aligned)
+    MAX_RST = np.average(out_rst_aligned)
 
     PRED = np.max([MAX_FLX, MAX_EXT])
 
     print(f'\n{MAX_FLX:.2e}, {MAX_EXT:.2e}, {MAX_RST:.2e}')
-    AVG_DIFF = np.average(np.abs(np.diff([MAX_FLX, MAX_EXT, MAX_RST])))
-    print(f'AVG DIFFERENCE: {AVG_DIFF}')
+    # AVG_DIFF = np.average(np.abs(np.diff([MAX_FLX, MAX_EXT, MAX_RST])))
+
 
     DIFF_EXT_RST = np.diff([MAX_RST, MAX_EXT])
     DIFF_FLX_RST = np.diff([MAX_RST, MAX_FLX])
-    print(DIFF_FLX_RST)
-    print(DIFF_EXT_RST)
+
+    AVG_DIFF = np.average([DIFF_EXT_RST, DIFF_FLX_RST])
+    # print(f'AVG DIFFERENCE: {AVG_DIFF}')
+    # print(DIFF_FLX_RST)
+    # print(DIFF_EXT_RST)
     # if (DIFF_FLX_RST < AVG_DIFF) and (DIFF_EXT_RST < AVG_DIFF):
     if AVG_DIFF < POOR_PREDICTION_THRESHOLD:
         PRED = MAX_RST
@@ -197,7 +215,7 @@ MID = window_size//2 # AT WHAT POINT TO ALIGN PEAKS, 50 is halfway into window
 PEAK_HEIGHT_FLX = 335
 PEAK_HEIGHT_EXT = 295 # WILL BE NEGATED
 
-POOR_PREDICTION_THRESHOLD = 1000000
+POOR_PREDICTION_THRESHOLD = 850000
 
 
 # excel_file = "../data/filenames-indexes_lpfilter.xlsx" # FOR TRAINING
@@ -231,12 +249,12 @@ for y, data in enumerate(FLEXION_DATA):
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
     flex_new_wave, _ = align_signal(data)
-    plt.plot(flex_new_wave)
+    # plt.plot(flex_new_wave)
     for i, el in enumerate(flex_new_wave):
         A_FLEX_FILTER[i] += el
 
-plt.title("ALL FLEX SIGNALS")
-plt.show() 
+# plt.title("ALL FLEX SIGNALS")
+# plt.show() 
 
 # ---------GENERATE EXTENSION FILTER
 
@@ -250,12 +268,12 @@ for y, data in enumerate(EXTENSION_DATA):
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
     _, ext_new_wave = align_signal(data)
-    plt.plot(ext_new_wave)
+    # plt.plot(ext_new_wave)
     for i, el in enumerate(ext_new_wave):
         A_EXT_FILTER[i] += el
-plt.title("ALL EXT SIGNALS")
-# plt.ylim((250,500))
-plt.show() 
+# plt.title("ALL EXT SIGNALS")
+# # plt.ylim((250,500))
+# plt.show() 
 
 # ---------GENERATE REST FILTER
 
@@ -295,30 +313,37 @@ for i, data in enumerate(RST_FILTER):
     RST_FILTER[i] = data/len(REST_DATA)
     A_RST_FILTER[i] = A_RST_FILTER[i]/len(REST_DATA)
 
-#
-# ---------PLOT FILTERS FOR FLEXION, EXTENSION, REST
-#
+# A_RST_FILTER = [0 for i in range(0,len(A_RST_FILTER))]
 
-plt.plot(FLEX_FILTER, color = 'b')
-plt.plot(A_FLEX_FILTER, color = 'r')
-plt.legend(["UNALIGNED", "ALIGNED"])
-plt.title("FLEXION FILTERS")
-plt.ylim((200,800))
-plt.show()
+# #
+# # ---------PLOT FILTERS FOR FLEXION, EXTENSION, REST
+# #
+# li = [i for i in FLEX_FILTER]
+# print(li)
+# plt.plot(FLEX_FILTER, color = 'b')
+# plt.plot(A_FLEX_FILTER, color = 'r')
+# plt.legend(["UNALIGNED", "ALIGNED"])
+# plt.title("FLEXION FILTERS")
+# plt.ylim((0,800))
+# plt.show()
 
-plt.plot(EXT_FILTER, color = 'b')
-plt.plot(A_EXT_FILTER, color = 'r')
-plt.legend(["UNALIGNED", "ALIGNED"])
-plt.title("EXTENSION FILTERS")
-plt.ylim((200,800))
-plt.show()
+# li = [i for i in EXT_FILTER]
+# print(li)
+# plt.plot(EXT_FILTER, color = 'b')
+# plt.plot(A_EXT_FILTER, color = 'r')
+# plt.legend(["UNALIGNED", "ALIGNED"])
+# plt.title("EXTENSION FILTERS")
+# plt.ylim((0,800))
+# plt.show()
 
-plt.plot(RST_FILTER, color = 'b')
-plt.plot(A_RST_FILTER, color = 'r')
-plt.legend(["UNALIGNED", "ALIGNED"])
-plt.title("REST FILTERS")
-plt.ylim((200,800))
-plt.show()
+# li = [i for i in RST_FILTER]
+# print(li)
+# plt.plot(RST_FILTER, color = 'b')
+# plt.plot(A_RST_FILTER, color = 'r')
+# plt.legend(["UNALIGNED", "ALIGNED"])
+# plt.title("REST FILTERS")
+# plt.ylim((0,800))
+# plt.show()
 
 
 #
@@ -331,63 +356,63 @@ FAIL = 0 # KEEP TRACK OF PASS/FAIL FOR ACCURATION
 COUNT = len(EXTENSION_DATA) + len(FLEXION_DATA) + len(REST_DATA)
 
 
-print('\n\nEXTENSION DATA')
-for d in EXTENSION_DATA:
+# print('\n\nEXTENSION DATA')
+# for d in EXTENSION_DATA:
 
-    PRED = match_filter_prediction(d)
+#     PRED = match_filter_prediction(d)
 
-    if PRED == extension:
-        print(f"PASS: PREDICT EXT")
-        PASS += 1
-    elif PRED == flexion:
-        print(f'FAIL: PREDICTION FLX')
-        FAIL += 1
-    elif PRED == rest:
-        print(f'FAIL: PREDICTION RST')
-        FAIL += 1
+#     if PRED == extension:
+#         print(f"PASS: PREDICT EXT")
+#         PASS += 1
+#     elif PRED == flexion:
+#         print(f'FAIL: PREDICTION FLX')
+#         FAIL += 1
+#     elif PRED == rest:
+#         print(f'FAIL: PREDICTION RST')
+#         FAIL += 1
 
-plt.title("FLX (red) , EXT (blue) & RST (yellow) \n on EXTENSION DATA ")
-plt.show()
+# # plt.title("FLX (red) , EXT (blue) & RST (yellow) \n on EXTENSION DATA ")
+# # plt.show()
 
-print('\n\nREST DATA')
-for d in REST_DATA:
+# print('\n\nREST DATA')
+# for d in REST_DATA:
 
-    PRED = match_filter_prediction(d)
+#     PRED = match_filter_prediction(d)
 
 
-    if PRED == extension:
-        print(f"FAIL: PREDICT EXT")
-        FAIL += 1
-    elif PRED == flexion:
-        print(f'FAIL: PREDICTION FLX')
-        FAIL += 1
-    elif PRED == rest:
-        print(f'PASS: PREDICTION RST')
-        PASS += 1
+#     if PRED == extension:
+#         print(f"FAIL: PREDICT EXT")
+#         FAIL += 1
+#     elif PRED == flexion:
+#         print(f'FAIL: PREDICTION FLX')
+#         FAIL += 1
+#     elif PRED == rest:
+#         print(f'PASS: PREDICTION RST')
+#         PASS += 1
 
-plt.title("FLX (red) , EXT (blue) & RST (yellow) \n on REST DATA ")
-plt.show()
+# # plt.title("FLX (red) , EXT (blue) & RST (yellow) \n on REST DATA ")
+# # plt.show()
 
-print('\n\nFLEXION DATA')
-for d in FLEXION_DATA:
+# print('\n\nFLEXION DATA')
+# for d in FLEXION_DATA:
 
-    PRED = match_filter_prediction(d)
+#     PRED = match_filter_prediction(d)
 
-    if PRED == extension:
-        print(f"FAIL: PREDICT EXT")
-        FAIL += 1
-    elif PRED == flexion:
-        print(f'PASS: PREDICTION FLX')
-        PASS += 1
-    elif PRED == rest:
-        print(f'FAIL: PREDICTION RST')
-        FAIL += 1
+#     if PRED == extension:
+#         print(f"FAIL: PREDICT EXT")
+#         FAIL += 1
+#     elif PRED == flexion:
+#         print(f'PASS: PREDICTION FLX')
+#         PASS += 1
+#     elif PRED == rest:
+#         print(f'FAIL: PREDICTION RST')
+#         FAIL += 1
 
-plt.title("FLX (red), EXT (blue) & RST (yellow) \n on FLEXION DATA ")
-plt.show()
+# # plt.title("FLX (red), EXT (blue) & RST (yellow) \n on FLEXION DATA ")
+# # plt.show()
 
-print(f'PASS/FAIL: {PASS}/{FAIL}')
-print(f'ACCURACY: {100*(PASS/COUNT):.2f}%')
+# print(f'PASS/FAIL: {PASS}/{FAIL}')
+# print(f'ACCURACY: {100*(PASS/COUNT):.2f}%')
 
 
 
@@ -427,10 +452,10 @@ for pt in emg_data_raw:
     actual = alpha * pt + (1 - alpha) * actual
     emg_data += [actual]
 
-plt.plot(emg_data_raw)
-plt.plot(emg_data)
-plt.legend(["EMG DATA", "EMG DATA WITH EMA"])
-plt.show()
+# plt.plot(emg_data_raw)
+# plt.plot(emg_data)
+# plt.legend(["EMG DATA", "EMG DATA WITH EMA"])
+# plt.show()
 
 # 
 # 
@@ -446,9 +471,11 @@ count_features = 0
 
 
 while((idx+window_size)<len(emg_data)):
-    if (gap + emg_data[idx]) < prev_i:
+    if ((gap + emg_data[idx]) < prev_i) or (-gap +emg_data[idx] > prev_i):
         # print(f'WINDOW START: {idx}')
         window = emg_data[idx:idx+window_size]
+        # plt.plot(window)
+        # plt.show()
         
         PRED = match_filter_prediction(window)
             
@@ -462,20 +489,21 @@ while((idx+window_size)<len(emg_data)):
             print(f'XXXX: PREDICT RST')
             title = "PREDICT REST"
 
-        plt.legend(["FLEX", "EXTEND", "REST"])
-        plt.title(title)
-        plt.show()
+        # plt.legend(["FLEX", "EXTEND", "REST"])
+        # plt.title(title)
+        # plt.show()
 
         # SAVE PREVIOUS DATA PNT FOR FINDING GAP
         prev_i = emg_data[idx]
         idx = idx+window_size
         count_features += 1 # feature counted
+        # break #### ONLY RUN ONCE, REMOVE
 
 
     else:
         prev_i = emg_data[idx]
         idx+=1
-
+    
 # plt.show()
 
 print(f'NUMBER OF FEATURES COUNTED {count_features}')
