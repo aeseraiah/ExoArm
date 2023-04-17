@@ -24,11 +24,16 @@ int ema(int exp, int actual, float alpha){
 
 void my_convolve(int* A, int* B){
 
+  float large_conv;
   for(int i = 0; i < WINDOW-1; i++)
   {
     CONVOLUTION[i] = 0;
-    for(int j = 0; j < WINDOW-1; j++){
-      CONVOLUTION[i] += ((A[i-j]/10) * (B[j]/10));
+    for(int j = 0; j < WINDOW-1; j++){ // THIS MAY NOT WORK, HAD TO DO IT TO USE INT INSTEAD OF
+      large_conv = ((float)(A[i-j]) * (float)(B[j]));
+      // cout<<"LARGE CONV: "<< large_conv<<'\n';
+      // cout<<"INT CONV: "<< (int)(large_conv/1000)<<'\n';
+      CONVOLUTION[i] += (int)(large_conv/1000);
+
     }
   }
 }
@@ -168,10 +173,8 @@ int match_filter_prediction(int *d){
 
 
   my_convolve(flx_aligned, FLEX_FILTER);
-  cout<<"cnv_flx_aligned[i]"<<"\n";
   for(int i = 0; i< WINDOW-1; i++){
     cnv_flx_aligned[i] = CONVOLUTION[i];
-    cout<<cnv_flx_aligned[i]<<"\n";
   }
 
   my_convolve(ext_aligned, EXT_FILTER);
