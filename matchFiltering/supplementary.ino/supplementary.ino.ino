@@ -10,8 +10,9 @@ int POOR_PREDICTION_THRESHOLD = 1000000;
 int flx_aligned[100];
 int ext_aligned[100];
 int CONVOLUTION[100];
+float alpha = 0.5;
 /// 
-
+// int count = 0;
 const int analogInPin = A0;
 
 int ema(int exp, int actual, float alpha){
@@ -49,7 +50,7 @@ int find_peaks(int *data, int max_height){
 void align_signal(int *data){
   int max_height;
   int peak_index, gap, endpoint;
-  int DC_COMPONENT = 305;
+  int DC_COMPONENT = 60;
   int neg_data[100];
   
   max_height = PEAK_HEIGHT_FLX;
@@ -148,8 +149,6 @@ int match_filter_prediction(int *d){
   int EXT_FILTER[100] = {433, 430, 427, 423, 419, 416, 413, 411, 412, 412, 412, 412, 414, 420, 427, 433, 434, 431, 424, 413, 395, 375, 352, 328, 306, 288, 277, 272, 273, 279, 288, 300, 313, 326, 340, 353, 363, 373, 380, 386, 391, 396, 400, 405, 409, 413, 416, 419, 423, 427, 430, 433, 436, 437, 438, 437, 435, 433, 430, 428, 425, 423, 420, 416, 412, 407, 402, 397, 392, 387, 381, 376, 371, 367, 363, 359, 355, 350, 347, 344, 342, 339, 337, 334, 332, 331, 330, 328, 327, 325, 324, 323, 322, 322, 321, 320, 319, 319, 319, 318};
   int RST_FILTER[100] = {322, 322, 321, 321, 320, 320, 319, 319, 318, 318, 318, 318, 317, 317, 317, 317, 317, 317, 317, 316, 317, 316, 316, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 318, 318, 318, 319, 319, 319, 319, 320, 320, 320, 321, 321, 321, 321, 322, 322, 322, 322, 322, 322, 322, 322, 322, 322, 323, 323, 323, 323, 324, 324, 324, 324, 325, 325, 325, 325, 325, 325, 326, 326, 326, 327, 327, 327, 327, 327, 327, 327, 327, 327, 328, 328, 328, 328, 328, 328, 328, 328, 328, 329, 329, 329, 329, 329, 330};
 
-
-
   int cnv_flx_aligned[100];
   int cnv_ext_aligned[100];
   int cnv_rst_aligned[100];
@@ -162,11 +161,9 @@ int match_filter_prediction(int *d){
   int DIFF_FLX_RST;
   int AVG_DIFF;
 
-
   int PRED;
 
   align_signal(d); // ALIGN AS YOU CONVOLVE
-
 
   convolve(flx_aligned, FLEX_FILTER);
   for(int i = 0; i< WINDOW-1; i++){
@@ -228,34 +225,33 @@ void setup(){
 
 void loop(){
   int sensorWindow[100];
-  int gap = 10;
+  int gap = 20;
   int val = 300;
   int prev_i = 0;
 
   int actual = 0;
   int ema_actual = 0;
   int prediction = 0;
-  // int count = 0;
+
 
 
   // may have an issue with missing part of wave before drop, maybe save a buffer of 5 at all times?
   val = analogRead(analogInPin);
-  ema_actual = ema(val, actual, 0.1);
+  ema_actual = ema(val, actual, alpha);
   if(((gap + ema_actual) < prev_i) || ((-gap + ema_actual) > prev_i)){
     for(int i = 0; i < WINDOW; i++) {
       val = analogRead(analogInPin);
-      ema_actual = ema(val, actual, 0.1); //test THIS
+      ema_actual = ema(val, actual, alpha); //test THIS
       sensorWindow[i] = ema_actual;
-      // Serial.println(data[i]);
+      Serial.println(data[i]);
       delay(30);
     }
-
+    Serial.println("PREDICTING...");
     prediction = match_filter_prediction(sensorWindow);
-    // Serial.println("PREDICTION", prediction);
+    Serial.println(prediction);
   }
   else{
-    Serial.println("polling for muscle movement ...");
-    
+    Serial.println("POLLING...");
   }
 
   
