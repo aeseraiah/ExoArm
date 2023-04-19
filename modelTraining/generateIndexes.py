@@ -14,7 +14,7 @@ def gen_index(MARKER_FILE, SHEET_NUMBER, data_file, window):
     markers = pd.read_csv(MARKER_FILE, header=None)
 
     # GET DATA FILENAME
-    excel_file = "../data/filenames-indexes_lpfilter.xlsx"
+    excel_file = "../data/filenames-indexes_hplp.xlsx"
 
     # curr_sheet = pd.read_excel(excel_file, SHEET_NUMBER)
     # data_file = curr_sheet['FILENAMES'][0]
@@ -84,7 +84,7 @@ def gen_index(MARKER_FILE, SHEET_NUMBER, data_file, window):
     print("indexes saved to file")
 
 if __name__ == '__main__':
-    MARKER_FILE = 'markerData/15:38:58_03:28:23electrode.csv'  # CHANGE EACH TIME, SHOULD NOT WORK O/W
+    MARKER_FILE = 'markerData/hp_lp_data/14:57:50_04:19:23.csv'  # CHANGE EACH TIME, SHOULD NOT WORK O/W
     SHEET_NUMBER = 'Sheet2'                  # CHANGE EACH TIME, SHOULD NOT WORK O/W
-    data_file = '../data/electrodeData/CoolTerm Capture 2023-03-28 15-39-11.txt'           # CHANGE EACH TIME, SHOULD NOT WORK O/W
-    gen_index(MARKER_FILE,SHEET_NUMBER,data_file,window = 90)
+    data_file = '../data/lp_hp_Data/CoolTerm Capture 2023-04-19 14-57-55.txt'           # CHANGE EACH TIME, SHOULD NOT WORK O/W
+    gen_index(MARKER_FILE,SHEET_NUMBER,data_file,window = 100)

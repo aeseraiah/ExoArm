@@ -17,7 +17,7 @@ def align_signal(data):
     peaks, _ = find_peaks(data, height= max_height) # find maximum peak
     if len(peaks)>0:
         peak = peaks[0]
-        print(f'flx peak: {peak}')
+        # print(f'flx peak: {peak}')
         # plt.plot(np.arange(0,len(data)) - peak, data, color = 'r')
         if peak > MID:
             gap = peak - MID
@@ -38,7 +38,7 @@ def align_signal(data):
     peaks, _ = find_peaks([-val for val in data], height= -max_height) # negate data to find minimum
     if len(peaks)>0:
         peak = peaks[0]
-        print(f'ext peak: {peak}')
+        # print(f'ext peak: {peak}')
         # plt.plot(np.arange(0,len(data)) - peak, data, color = 'r')
         if peak > MID:
             gap = peak - MID
@@ -91,29 +91,29 @@ def generate_data_lists(excel_file, TRAINING_DATA_COUNT):
         np_data.append(emg_data_ema)
 
 
-    # # ENSURE DATA SEPARATED
-    # for npd in np_data:
-    #     plt.plot(npd)
-    #     # plt.show()
-    # plt.title("ALL TRAINING SIGNALS")
-    # plt.show()
+    # ENSURE DATA SEPARATED
+    for npd in np_data:
+        plt.plot(npd)
+        # plt.show()
+    plt.title("ALL TRAINING SIGNALS")
+    plt.show()
 
     # 
     # SHOW THE SEPARATION BETWEEN FEATURES #################################
     # IS NOT SHOWING THE EMA FILTERED WAVES
     #
 
-    # for index_index in range(0, TRAINING_DATA_COUNT):
-    #     for i in extension_startindexes[index_index]:
-    #         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'green')
-    #     for i in flexion_startindexes[index_index]:
-    #         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'red')
-    #     for i in sustain_startindexes[index_index]:
-    #         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'purple')
-    #     for i in rest_startindexes[index_index]:
-    #         plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
-    #     plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
-    #     plt.show()
+    for index_index in range(0, TRAINING_DATA_COUNT):
+        for i in extension_startindexes[index_index]:
+            plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'green')
+        for i in flexion_startindexes[index_index]:
+            plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'red')
+        for i in sustain_startindexes[index_index]:
+            plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'purple')
+        for i in rest_startindexes[index_index]:
+            plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
+        plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
+        plt.show()
 
 
     # GENERATE FEATURE ARRAYS
@@ -146,7 +146,6 @@ def my_convolve(A, B):
         
     return CONVOLUTION
 
-
 def match_filter_prediction(d):
     # THIS IS CONVERTED TO ARDUINO CODE/CPP
 
@@ -158,13 +157,13 @@ def match_filter_prediction(d):
     # print(f"FLX CONV {out_flx_aligned}")
     # print(f"EXT CONV {out_ext_aligned}")
     # print(f"RST CONV {out_rst_aligned}")
-    # plt.plot(out_flx_aligned, 'r')
-    # plt.plot(out_ext_aligned, 'b')
-    # plt.plot(out_rst_aligned, 'y')
+    plt.plot(out_flx_aligned, 'r')
+    plt.plot(out_ext_aligned, 'b')
+    plt.plot(out_rst_aligned, 'y')
 
-    MAX_FLX = np.average(out_flx_aligned)
-    MAX_EXT = np.average(out_ext_aligned)
-    MAX_RST = np.average(out_rst_aligned)
+    MAX_FLX = np.max(out_flx_aligned)
+    MAX_EXT = np.max(out_ext_aligned)
+    MAX_RST = np.max(out_rst_aligned)
 
     PRED = np.max([MAX_FLX, MAX_EXT])
 
@@ -175,13 +174,13 @@ def match_filter_prediction(d):
     DIFF_EXT_RST = np.diff([MAX_RST, MAX_EXT])
     DIFF_FLX_RST = np.diff([MAX_RST, MAX_FLX])
 
-    AVG_DIFF = np.average([DIFF_EXT_RST, DIFF_FLX_RST])
-    # print(f'AVG DIFFERENCE: {AVG_DIFF}')
-    # print(DIFF_FLX_RST)
-    # print(DIFF_EXT_RST)
-    # if (DIFF_FLX_RST < AVG_DIFF) and (DIFF_EXT_RST < AVG_DIFF):
-    if AVG_DIFF < POOR_PREDICTION_THRESHOLD:
-        PRED = MAX_RST
+    # AVG_DIFF = np.average([DIFF_EXT_RST, DIFF_FLX_RST])
+    # # print(f'AVG DIFFERENCE: {AVG_DIFF}')
+    # # print(DIFF_FLX_RST)
+    # # print(DIFF_EXT_RST)
+    # # if (DIFF_FLX_RST < AVG_DIFF) and (DIFF_EXT_RST < AVG_DIFF):
+    # if AVG_DIFF < POOR_PREDICTION_THRESHOLD:
+    #     PRED = MAX_RST
 
     flexion = 0
     extension = 1
@@ -206,22 +205,26 @@ def match_filter_prediction(d):
 
 # CONSTANTS
 window_size = 100
-alpha = 0.1
-DC_COMPONENT = 305 # unfiltered: 300 , used for edge cases
+alpha = 0.5
+DC_COMPONENT = 60 # unfiltered: 300 , used for edge cases
 # DC_COMPONENT = 0 # filtered: 0
 
 MID = window_size//2 # AT WHAT POINT TO ALIGN PEAKS, 50 is halfway into window
 
-PEAK_HEIGHT_FLX = 335
-PEAK_HEIGHT_EXT = 295 # WILL BE NEGATED
+PEAK_HEIGHT_FLX = 65
+# PEAK_HEIGHT_FLX = 335
+PEAK_HEIGHT_EXT = 55 # WILL BE NEGATED
+# PEAK_HEIGHT_EXT = 295 # WILL BE NEGATED
 
 POOR_PREDICTION_THRESHOLD = 850000
 
 
 # excel_file = "../data/filenames-indexes_lpfilter.xlsx" # FOR TRAINING
-excel_file = "../data/filenames-indexes.xlsx" # FOR TRAINING
+# excel_file = "../data/filenames-indexes.xlsx" # FOR TRAINING
+excel_file = "../data/filenames-indexes_hplp.xlsx" # FOR TRAINING
 TRAINING_DATA_COUNT = 1 # WILL DO THE FIRST ONE IN THE EXCEL SPREADSHEET
-test_file_realtime = '../data/CoolTerm Capture 2023-02-13 18-31-26.txt' # FOR MODELING REALLY GOOD ACCURACY
+# test_file_realtime = '../data/CoolTerm Capture 2023-02-13 18-31-26.txt' # FOR MODELING REALLY GOOD ACCURACY
+test_file_realtime = '../data/lp_hp_Data/CoolTerm Capture 2023-04-19 14-57-55.txt'
 
 
 filenames = []
@@ -249,12 +252,12 @@ for y, data in enumerate(FLEXION_DATA):
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
     flex_new_wave, _ = align_signal(data)
-    # plt.plot(flex_new_wave)
+    plt.plot(flex_new_wave)
     for i, el in enumerate(flex_new_wave):
         A_FLEX_FILTER[i] += el
 
-# plt.title("ALL FLEX SIGNALS")
-# plt.show() 
+plt.title("ALL FLEX SIGNALS")
+plt.show() 
 
 # ---------GENERATE EXTENSION FILTER
 
@@ -268,12 +271,12 @@ for y, data in enumerate(EXTENSION_DATA):
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
     _, ext_new_wave = align_signal(data)
-    # plt.plot(ext_new_wave)
+    plt.plot(ext_new_wave)
     for i, el in enumerate(ext_new_wave):
         A_EXT_FILTER[i] += el
-# plt.title("ALL EXT SIGNALS")
-# # plt.ylim((250,500))
-# plt.show() 
+plt.title("ALL EXT SIGNALS")
+plt.ylim((0,100))
+plt.show() 
 
 # ---------GENERATE REST FILTER
 
@@ -287,16 +290,16 @@ for y, data in enumerate(REST_DATA):
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
     _, rst_new_wave = align_signal(data) # IF NO PEAKS, SHOULD MOST LIKELY BE REST, ORIGINAL SIGNAL, EITHER OUTPUT VALID
-    # plt.plot(rst_new_wave) # USE FOR PRUNING DATA
+    plt.plot(rst_new_wave) # USE FOR PRUNING DATA
     # plt.title(y+1)
     # plt.ylim((250,350))
     # plt.show()
     for i, el in enumerate(rst_new_wave):
         A_RST_FILTER[i] += el
 
-# plt.title("ALL RST SIGNALS")
-# plt.ylim((250,500))
-# plt.show() 
+plt.title("ALL RST SIGNALS")
+plt.ylim((0,100))
+plt.show() 
 
 #
 # ---------AVERAGE FILTERS
@@ -315,35 +318,35 @@ for i, data in enumerate(RST_FILTER):
 
 # A_RST_FILTER = [0 for i in range(0,len(A_RST_FILTER))]
 
-# #
-# # ---------PLOT FILTERS FOR FLEXION, EXTENSION, REST
-# #
-# li = [i for i in FLEX_FILTER]
-# print(li)
-# plt.plot(FLEX_FILTER, color = 'b')
-# plt.plot(A_FLEX_FILTER, color = 'r')
-# plt.legend(["UNALIGNED", "ALIGNED"])
-# plt.title("FLEXION FILTERS")
-# plt.ylim((0,800))
-# plt.show()
+#
+# ---------PLOT FILTERS FOR FLEXION, EXTENSION, REST
+#
+li = [i for i in FLEX_FILTER]
+print(li)
+plt.plot(FLEX_FILTER, color = 'b')
+plt.plot(A_FLEX_FILTER, color = 'r')
+plt.legend(["UNALIGNED", "ALIGNED"])
+plt.title("FLEXION FILTERS")
+plt.ylim((0,100))
+plt.show()
 
-# li = [i for i in EXT_FILTER]
-# print(li)
-# plt.plot(EXT_FILTER, color = 'b')
-# plt.plot(A_EXT_FILTER, color = 'r')
-# plt.legend(["UNALIGNED", "ALIGNED"])
-# plt.title("EXTENSION FILTERS")
-# plt.ylim((0,800))
-# plt.show()
+li = [i for i in EXT_FILTER]
+print(li)
+plt.plot(EXT_FILTER, color = 'b')
+plt.plot(A_EXT_FILTER, color = 'r')
+plt.legend(["UNALIGNED", "ALIGNED"])
+plt.title("EXTENSION FILTERS")
+plt.ylim((0,100))
+plt.show()
 
-# li = [i for i in RST_FILTER]
-# print(li)
-# plt.plot(RST_FILTER, color = 'b')
-# plt.plot(A_RST_FILTER, color = 'r')
-# plt.legend(["UNALIGNED", "ALIGNED"])
-# plt.title("REST FILTERS")
-# plt.ylim((0,800))
-# plt.show()
+li = [i for i in RST_FILTER]
+print(li)
+plt.plot(RST_FILTER, color = 'b')
+plt.plot(A_RST_FILTER, color = 'r')
+plt.legend(["UNALIGNED", "ALIGNED"])
+plt.title("REST FILTERS")
+plt.ylim((0,100))
+plt.show()
 
 
 #
@@ -439,7 +442,6 @@ traj = []
 
 test_data = pd.read_csv(test_file_realtime, delimiter='\t')
 emg_data_raw = test_data[test_data.columns[1]]
-alpha = 0.1
 expected = 0
 actual = 0
 
@@ -464,7 +466,7 @@ for pt in emg_data_raw:
 # predictions made when drop is detected
 
 prev_i = 0 # for comparison
-gap = 1 # how much of a decrease between two idx's
+gap = 5 # how much of a decrease between two idx's
 idx = 0 # index for iteration
 backtrack = 10 # how much to go back once window starts
 count_features = 0
@@ -489,9 +491,9 @@ while((idx+window_size)<len(emg_data)):
             print(f'XXXX: PREDICT RST')
             title = "PREDICT REST"
 
-        # plt.legend(["FLEX", "EXTEND", "REST"])
-        # plt.title(title)
-        # plt.show()
+        plt.legend(["FLEX", "EXTEND", "REST"])
+        plt.title(title)
+        plt.show()
 
         # SAVE PREVIOUS DATA PNT FOR FINDING GAP
         prev_i = emg_data[idx]
