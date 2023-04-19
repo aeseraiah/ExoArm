@@ -321,7 +321,10 @@ for i, data in enumerate(RST_FILTER):
 #
 # ---------PLOT FILTERS FOR FLEXION, EXTENSION, REST
 #
-li = [i for i in FLEX_FILTER]
+
+CHANGE_DC_OFFSET = DC_COMPONENT - 24
+
+li = [(i - CHANGE_DC_OFFSET) for i in FLEX_FILTER]
 print(li)
 plt.plot(FLEX_FILTER, color = 'b')
 plt.plot(A_FLEX_FILTER, color = 'r')
@@ -330,7 +333,7 @@ plt.title("FLEXION FILTERS")
 plt.ylim((0,100))
 plt.show()
 
-li = [i for i in EXT_FILTER]
+li = [(i - CHANGE_DC_OFFSET) for i in EXT_FILTER]
 print(li)
 plt.plot(EXT_FILTER, color = 'b')
 plt.plot(A_EXT_FILTER, color = 'r')
@@ -339,7 +342,7 @@ plt.title("EXTENSION FILTERS")
 plt.ylim((0,100))
 plt.show()
 
-li = [i for i in RST_FILTER]
+li = [(i - CHANGE_DC_OFFSET) for i in RST_FILTER]
 print(li)
 plt.plot(RST_FILTER, color = 'b')
 plt.plot(A_RST_FILTER, color = 'r')

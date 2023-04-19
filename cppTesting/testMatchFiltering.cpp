@@ -7,14 +7,18 @@
 #include <cmath>
 using namespace std;
 
-int PEAK_HEIGHT_FLX = 335;
-int PEAK_HEIGHT_EXT = 295;
+int PEAK_HEIGHT_FLX = 30;
+int PEAK_HEIGHT_EXT = 20;
 int MID = 50;
 int WINDOW = 100;
-int POOR_PREDICTION_THRESHOLD = 1000000;
 int flx_aligned[100];
 int ext_aligned[100];
-// int CONVOLUTION[100];
+int DC_COMPONENT = 24;
+float alpha = 0.4;
+
+int FLEX_FILTER[100] = {23, 23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 25, 26, 26, 26, 25, 25, 25, 25, 25, 25, 25, 26, 26, 27, 26, 27, 27, 28, 28, 28, 28, 28, 29, 29, 30, 29, 29, 28, 28, 28, 29, 29, 28, 27, 26, 23, 21, 19, 18, 18, 19, 20, 21, 22, 23, 25, 26, 27, 29, 30, 30, 31, 31, 32, 32, 32, 33, 32, 32, 32, 32, 32, 32, 32, 32, 32, 33, 33, 33, 33, 33, 32, 32, 33, 33, 33, 33, 32, 33, 33, 33, 33, 34, 34, 34, 34, 34, 34};
+int EXT_FILTER[100] = {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25, 25, 25, 26, 26, 27, 27, 28, 29, 30, 31, 31, 30, 28, 27, 25, 24, 23, 23, 22, 22, 23, 24, 25, 26, 27, 27, 28, 28, 29, 28, 28, 28, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 29, 29, 29, 30, 30, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 33, 33, 33, 33, 33, 33, 33, 33, 33};
+int RST_FILTER[100] = {23, 23, 24, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 27, 28, 28, 29, 28, 29, 30, 30, 30, 30, 30, 31, 31, 31, 31, 31, 32, 32, 33, 33, 33, 33, 34, 34, 34, 34, 34, 34, 34, 35, 36, 37, 36, 36, 37, 37, 37, 37, 38, 38, 38, 38, 38, 38, 39, 39, 39, 40, 39, 40, 40, 41, 40, 41, 41, 41, 40, 41, 41, 41, 42, 43, 43, 43, 43, 43, 44, 44, 45, 45, 45, 45, 46, 46, 47, 47, 47, 47, 47, 48, 48};
 
 
 int ema(int exp, int actual, float alpha){
@@ -22,26 +26,11 @@ int ema(int exp, int actual, float alpha){
   return (int) (alpha * (float)exp + (1 - alpha) * (float)actual);
 }
 
-// void my_convolve(int* A, int* B, int* CONVOLUTION){
-
-//   float large_conv;
-//   for(int i = 0; i < WINDOW-1; i++)
-//   {
-//     CONVOLUTION[i] = 0;
-//     for(int j = 0; j < WINDOW-1; j++){ // THIS MAY NOT WORK, HAD TO DO IT TO USE INT INSTEAD OF
-//       large_conv = ((float)(A[i-j]) * (float)(B[j]));
-//       // cout<<"LARGE CONV: "<< large_conv<<'\n';
-//       // cout<<"INT CONV: "<< (int)(round(large_conv)/5000)<<'\n';
-//       CONVOLUTION[i] += (int)(round(large_conv)/5000);
-
-//     }
-//   }
-// }
-
-void convolve_max(int* A, int* B, int *MAX_VAL){
+void convolve_max(int* A, int* B, double *MAX_VAL){
 
   double large_conv = 0;
   double prev_conv = 0;
+  double large_max = 0;
   *MAX_VAL = 0; // zero out max
   for(int i = 0; i < WINDOW-1; i++)
   {
@@ -49,16 +38,14 @@ void convolve_max(int* A, int* B, int *MAX_VAL){
     for(int j = 0; j < WINDOW-1; j++){ // THIS MAY NOT WORK, HAD TO DO IT TO USE INT INSTEAD OF
       large_conv += ((double)(A[i-j]) * (double)(B[j])); // compute current convolution
     }
-
     // CHECK IF CURRENT CONV IS THE MAX VAL, MAYBE ALSO MAKE ONE FOR AVG
-    if ((large_conv > prev_conv) && (large_conv > (double)(*MAX_VAL))){
-        *MAX_VAL = (int)(round(large_conv)/1000);
+    if ((large_conv > prev_conv) && (large_conv > large_max)){
+        large_max = large_conv;
     }
-
     prev_conv = large_conv;
   }
-  // Serial.println(*MAX_VAL);
-  // cout<<"MAX VALUE: "<<(*MAX_VAL)<<endl;
+  *MAX_VAL = large_max;
+
 }
 
 int find_peaks(int *data, int max_height){
@@ -76,8 +63,7 @@ int find_peaks(int *data, int max_height){
 void align_signal(int *data){
   int max_height;
   int peak_index, gap, endpoint;
-  int DC_COMPONENT = 305;
-  int neg_data[100];
+  int neg_data[WINDOW];
   
   max_height = PEAK_HEIGHT_FLX;
 
@@ -156,102 +142,28 @@ void align_signal(int *data){
 
 }
 
-int find_max(int *data){ // find max value b/w 2 , not like peak
-  int MAX_VALUE = 0;
-  int PREV = 0;
-  for(int i = 0; i < WINDOW-1; i++){
-    if ((data[i] > PREV)&&(data[i]>MAX_VALUE)){
-      MAX_VALUE = i;
-    }
-  }
-  return MAX_VALUE;
-}
-
 int match_filter_prediction(int *d){
     // THIS IS CONVERTED TO ARDUINO CODE/CPP
 
-
-  int FLEX_FILTER[100] = {298, 298, 298, 298, 298, 298, 296, 294, 291, 287, 284, 279, 274, 267, 260, 252, 244, 235, 228, 220, 211, 201, 190, 178, 164, 152, 140, 127, 117, 110, 108, 113, 124, 140, 160, 179, 197, 216, 237, 260, 284, 309, 332, 355, 379, 404, 429, 453, 476, 495, 511, 526, 538, 549, 558, 566, 572, 576, 578, 578, 577, 574, 570, 566, 561, 555, 550, 544, 538, 531, 524, 517, 511, 504, 498, 491, 485, 478, 472, 466, 460, 454, 448, 443, 438, 432, 427, 422, 418, 414, 409, 405, 402, 397, 394, 391, 388, 384, 381, 378};
-  int EXT_FILTER[100] = {433, 430, 427, 423, 419, 416, 413, 411, 412, 412, 412, 412, 414, 420, 427, 433, 434, 431, 424, 413, 395, 375, 352, 328, 306, 288, 277, 272, 273, 279, 288, 300, 313, 326, 340, 353, 363, 373, 380, 386, 391, 396, 400, 405, 409, 413, 416, 419, 423, 427, 430, 433, 436, 437, 438, 437, 435, 433, 430, 428, 425, 423, 420, 416, 412, 407, 402, 397, 392, 387, 381, 376, 371, 367, 363, 359, 355, 350, 347, 344, 342, 339, 337, 334, 332, 331, 330, 328, 327, 325, 324, 323, 322, 322, 321, 320, 319, 319, 319, 318};
-  int RST_FILTER[100] = {322, 322, 321, 321, 320, 320, 319, 319, 318, 318, 318, 318, 317, 317, 317, 317, 317, 317, 317, 316, 317, 316, 316, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 318, 318, 318, 319, 319, 319, 319, 320, 320, 320, 321, 321, 321, 321, 322, 322, 322, 322, 322, 322, 322, 322, 322, 322, 323, 323, 323, 323, 324, 324, 324, 324, 325, 325, 325, 325, 325, 325, 326, 326, 326, 327, 327, 327, 327, 327, 327, 327, 327, 327, 328, 328, 328, 328, 328, 328, 328, 328, 328, 329, 329, 329, 329, 329, 330};
-
-
-
-  int cnv_flx_aligned[100];
-  int cnv_ext_aligned[100];
-  int cnv_rst_aligned[100];
-
-  // int *MAX_FLX;
-  // int *MAX_EXT;
-  // int *MAX_RST;
-
-  int MAX_FLX;
-  int MAX_EXT;
-  int MAX_RST;
-  int FLX_OR_EXT[2];
-  int DIFF_EXT_RST;
-  int DIFF_FLX_RST;
-  int AVG_DIFF;
-
+  double MAX_FLX;
+  double MAX_EXT;
+  double MAX_RST;
 
   int PRED;
 
   align_signal(d); // ALIGN AS YOU CONVOLVE
 
   convolve_max(flx_aligned, FLEX_FILTER, &MAX_FLX);
-  cout<<"MAXFLX AFTER FN CALL: "<<MAX_FLX<<endl;
+  cout<<"MAX FLX: "<<MAX_FLX<<endl;
 
   convolve_max(ext_aligned, EXT_FILTER, &MAX_EXT);
-  cout<<"MAXEXT AFTER FN CALL: "<<MAX_EXT<<endl;
+  cout<<"MAX EXT: "<<MAX_EXT<<endl;
 
-  convolve_max(ext_aligned, RST_FILTER, &MAX_RST);
-  cout<<"MAXRST AFTER FN CALL: "<<MAX_RST<<endl;
+  // convolve_max(ext_aligned, RST_FILTER, &MAX_RST);
+  // cout<<"MAX RST: "<<MAX_RST<<endl;
 
 
-  // for(int i = 0; i< WINDOW-1; i++){
-  //   // cnv_rst_aligned[i] = CONVOLUTION[i];
-  //   cout<<"RST:"<<cnv_rst_aligned[i]<<endl;
-  // }
-  // my_convolve(flx_aligned, FLEX_FILTER, cnv_flx_aligned);
-  // // cout<<"PRINTING FILLED FLX ARRAY"<<endl;
-  // // for(int i = 0; i< WINDOW-1; i++){
-  // //   // cnv_flx_aligned[i] = CONVOLUTION[i];
-  // //   cout<<"FLX:"<<cnv_flx_aligned[i]<<endl;
-  // // }
-
-  // my_convolve(ext_aligned, EXT_FILTER, cnv_ext_aligned);
-  // // for(int i = 0; i< WINDOW-1; i++){
-  // //   // cnv_ext_aligned[i] = CONVOLUTION[i];
-  // //   cout<<"EXT:"<<cnv_ext_aligned[i]<<endl;
-  // // }
-
-  // my_convolve(ext_aligned, RST_FILTER, cnv_rst_aligned);
-  // // for(int i = 0; i< WINDOW-1; i++){
-  // //   // cnv_rst_aligned[i] = CONVOLUTION[i];
-  // //   cout<<"RST:"<<cnv_rst_aligned[i]<<endl;
-  // // }
-
-  // MAX_FLX = find_max(cnv_flx_aligned);
-  // MAX_EXT = find_max(cnv_ext_aligned);
-  // MAX_RST = find_max(cnv_rst_aligned);
-
-  FLX_OR_EXT[0] = MAX_FLX;
-  FLX_OR_EXT[1] = MAX_EXT;
-
-  PRED = find_max(FLX_OR_EXT);
-
-  // AVG_DIFF = np.average(np.abs(np.diff([MAX_FLX, MAX_EXT, MAX_RST])))
-
-  DIFF_EXT_RST = abs(MAX_RST - MAX_EXT);
-  DIFF_FLX_RST = abs(MAX_RST - MAX_FLX);
-
-  AVG_DIFF = (DIFF_EXT_RST + DIFF_FLX_RST) / 2; 
-  
-  if (AVG_DIFF < POOR_PREDICTION_THRESHOLD){
-      PRED = MAX_RST;
-  }
-
-  // PRED = 1;
+  PRED = (MAX_FLX>MAX_EXT ? MAX_FLX:MAX_EXT); // FLEX OR EXTEND HIGHER CORRELATION
 
 
 //flexion = 0, extension = 1, sustain = 2, rest = 3
@@ -267,31 +179,19 @@ int match_filter_prediction(int *d){
     cout<<"PREDICTION: REST"<<"\n";
     return 3;
   }
-  // if (PRED == *MAX_FLX){
-  //   cout<<"PREDICTION: FLEX"<<"\n";
-  //   return 0;
-  // }
-  // else if (PRED == *MAX_EXT){
-  //   cout<<"PREDICTION: EXT"<<"\n";
-  //   return 1;
-  // }
-  // else if (PRED == *MAX_RST){
-  //   cout<<"PREDICTION: REST"<<"\n";
-  //   return 3;
-  // }
 
   return -1;
 }
 
 int main() {
 
-  int sensorWindow[100];
+  int sensorWindow[WINDOW];
 
   int gap = 10;
-  int val = 300;
+  int val = 0;
   int prev_i = 0;
 
-  int actual = 0;
+  int actual = 0; // CHANGES DC OFFSET DUE TO EMA
   int ema_actual = 0;
   int prediction = 0;
   int count = 0;
@@ -301,7 +201,7 @@ int main() {
 
 
     // string fname = "../data/CoolTerm Capture 2023-02-07 10-29-08.txt";
-    string fname = "../data/CoolTerm Capture 2023-02-13 18-31-26.txt";
+    string fname = "../data/lp_hp_Data/CoolTerm Capture 2023-04-19 14-57-55.txt";
 
     vector<vector<string> > content;
     vector<string> row;
@@ -345,7 +245,7 @@ int short_window = 0;
 while (i<content.size()){
     // cout<<"CURRENT i VALUE: "<<i<<"\n";
     int val =  stof(content[i][1]); // holds current emg
-    ema_actual = ema(val, actual, 0.1);
+    ema_actual = ema(val, actual, alpha);
     actual = ema_actual;
 
     // cout<<"PREV VAL"<<prev_i<<endl;
@@ -360,16 +260,11 @@ while (i<content.size()){
           break;
         }
         val =  stof(content[i+j][1]);
-        ema_actual = ema(val, actual, 0.1);
+        ema_actual = ema(val, actual, alpha);
         // cout<<ema_actual<<'\n';
         sensorWindow[j-1] = ema_actual; 
         actual = ema_actual;
-        // i++;
-
       }
-      // prev_i = val;
-      // i++;
-
 
       //  MAKE PREDICTION ON WINDOW
       if(short_window == 0){
