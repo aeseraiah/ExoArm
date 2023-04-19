@@ -14,7 +14,7 @@ int WINDOW = 100;
 int POOR_PREDICTION_THRESHOLD = 1000000;
 int flx_aligned[100];
 int ext_aligned[100];
-int CONVOLUTION[100];
+// int CONVOLUTION[100];
 
 
 int ema(int exp, int actual, float alpha){
@@ -22,20 +22,43 @@ int ema(int exp, int actual, float alpha){
   return (int) (alpha * (float)exp + (1 - alpha) * (float)actual);
 }
 
-void my_convolve(int* A, int* B){
+// void my_convolve(int* A, int* B, int* CONVOLUTION){
 
-  float large_conv;
+//   float large_conv;
+//   for(int i = 0; i < WINDOW-1; i++)
+//   {
+//     CONVOLUTION[i] = 0;
+//     for(int j = 0; j < WINDOW-1; j++){ // THIS MAY NOT WORK, HAD TO DO IT TO USE INT INSTEAD OF
+//       large_conv = ((float)(A[i-j]) * (float)(B[j]));
+//       // cout<<"LARGE CONV: "<< large_conv<<'\n';
+//       // cout<<"INT CONV: "<< (int)(round(large_conv)/5000)<<'\n';
+//       CONVOLUTION[i] += (int)(round(large_conv)/5000);
+
+//     }
+//   }
+// }
+
+void convolve_max(int* A, int* B, int *MAX_VAL){
+
+  double large_conv = 0;
+  double prev_conv = 0;
+  *MAX_VAL = 0; // zero out max
   for(int i = 0; i < WINDOW-1; i++)
   {
-    CONVOLUTION[i] = 0;
+    large_conv = 0;
     for(int j = 0; j < WINDOW-1; j++){ // THIS MAY NOT WORK, HAD TO DO IT TO USE INT INSTEAD OF
-      large_conv = ((float)(A[i-j]) * (float)(B[j]));
-      // cout<<"LARGE CONV: "<< large_conv<<'\n';
-      // cout<<"INT CONV: "<< (int)(large_conv/1000)<<'\n';
-      CONVOLUTION[i] += (int)(large_conv/1000);
-
+      large_conv += ((double)(A[i-j]) * (double)(B[j])); // compute current convolution
     }
+
+    // CHECK IF CURRENT CONV IS THE MAX VAL, MAYBE ALSO MAKE ONE FOR AVG
+    if ((large_conv > prev_conv) && (large_conv > (double)(*MAX_VAL))){
+        *MAX_VAL = (int)(round(large_conv)/1000);
+    }
+
+    prev_conv = large_conv;
   }
+  // Serial.println(*MAX_VAL);
+  // cout<<"MAX VALUE: "<<(*MAX_VAL)<<endl;
 }
 
 int find_peaks(int *data, int max_height){
@@ -133,11 +156,11 @@ void align_signal(int *data){
 
 }
 
-int find_max(int *data){ // find max value , not peak
+int find_max(int *data){ // find max value b/w 2 , not like peak
   int MAX_VALUE = 0;
   int PREV = 0;
   for(int i = 0; i < WINDOW-1; i++){
-    if ((data[i] > PREV)){
+    if ((data[i] > PREV)&&(data[i]>MAX_VALUE)){
       MAX_VALUE = i;
     }
   }
@@ -158,6 +181,10 @@ int match_filter_prediction(int *d){
   int cnv_ext_aligned[100];
   int cnv_rst_aligned[100];
 
+  // int *MAX_FLX;
+  // int *MAX_EXT;
+  // int *MAX_RST;
+
   int MAX_FLX;
   int MAX_EXT;
   int MAX_RST;
@@ -171,25 +198,42 @@ int match_filter_prediction(int *d){
 
   align_signal(d); // ALIGN AS YOU CONVOLVE
 
+  convolve_max(flx_aligned, FLEX_FILTER, &MAX_FLX);
+  cout<<"MAXFLX AFTER FN CALL: "<<MAX_FLX<<endl;
 
-  my_convolve(flx_aligned, FLEX_FILTER);
-  for(int i = 0; i< WINDOW-1; i++){
-    cnv_flx_aligned[i] = CONVOLUTION[i];
-  }
+  convolve_max(ext_aligned, EXT_FILTER, &MAX_EXT);
+  cout<<"MAXEXT AFTER FN CALL: "<<MAX_EXT<<endl;
 
-  my_convolve(ext_aligned, EXT_FILTER);
-  for(int i = 0; i< WINDOW-1; i++){
-    cnv_ext_aligned[i] = CONVOLUTION[i];
-  }
+  convolve_max(ext_aligned, RST_FILTER, &MAX_RST);
+  cout<<"MAXRST AFTER FN CALL: "<<MAX_RST<<endl;
 
-  my_convolve(ext_aligned, RST_FILTER);
-  for(int i = 0; i< WINDOW-1; i++){
-    cnv_rst_aligned[i] = CONVOLUTION[i];
-  }
 
-  MAX_FLX = find_max(cnv_flx_aligned);
-  MAX_EXT = find_max(cnv_ext_aligned);
-  MAX_RST = find_max(cnv_rst_aligned);
+  // for(int i = 0; i< WINDOW-1; i++){
+  //   // cnv_rst_aligned[i] = CONVOLUTION[i];
+  //   cout<<"RST:"<<cnv_rst_aligned[i]<<endl;
+  // }
+  // my_convolve(flx_aligned, FLEX_FILTER, cnv_flx_aligned);
+  // // cout<<"PRINTING FILLED FLX ARRAY"<<endl;
+  // // for(int i = 0; i< WINDOW-1; i++){
+  // //   // cnv_flx_aligned[i] = CONVOLUTION[i];
+  // //   cout<<"FLX:"<<cnv_flx_aligned[i]<<endl;
+  // // }
+
+  // my_convolve(ext_aligned, EXT_FILTER, cnv_ext_aligned);
+  // // for(int i = 0; i< WINDOW-1; i++){
+  // //   // cnv_ext_aligned[i] = CONVOLUTION[i];
+  // //   cout<<"EXT:"<<cnv_ext_aligned[i]<<endl;
+  // // }
+
+  // my_convolve(ext_aligned, RST_FILTER, cnv_rst_aligned);
+  // // for(int i = 0; i< WINDOW-1; i++){
+  // //   // cnv_rst_aligned[i] = CONVOLUTION[i];
+  // //   cout<<"RST:"<<cnv_rst_aligned[i]<<endl;
+  // // }
+
+  // MAX_FLX = find_max(cnv_flx_aligned);
+  // MAX_EXT = find_max(cnv_ext_aligned);
+  // MAX_RST = find_max(cnv_rst_aligned);
 
   FLX_OR_EXT[0] = MAX_FLX;
   FLX_OR_EXT[1] = MAX_EXT;
@@ -207,6 +251,8 @@ int match_filter_prediction(int *d){
       PRED = MAX_RST;
   }
 
+  // PRED = 1;
+
 
 //flexion = 0, extension = 1, sustain = 2, rest = 3
   if (PRED == MAX_FLX){
@@ -221,6 +267,18 @@ int match_filter_prediction(int *d){
     cout<<"PREDICTION: REST"<<"\n";
     return 3;
   }
+  // if (PRED == *MAX_FLX){
+  //   cout<<"PREDICTION: FLEX"<<"\n";
+  //   return 0;
+  // }
+  // else if (PRED == *MAX_EXT){
+  //   cout<<"PREDICTION: EXT"<<"\n";
+  //   return 1;
+  // }
+  // else if (PRED == *MAX_RST){
+  //   cout<<"PREDICTION: REST"<<"\n";
+  //   return 3;
+  // }
 
   return -1;
 }
@@ -228,26 +286,6 @@ int match_filter_prediction(int *d){
 int main() {
 
   int sensorWindow[100];
-  // double sensorWindow;
-
-
-  // READ 100 SAMPLE WINDOWS FROM EMG & AVERAGE
-  // getWindowedAmplitude();
-  
-  // GET WINDOW TO CLASSIFY
-  //consecutive
-  // for(int i = 0; i < 100; i++) {
-  //   // sensorWindow[i] = analogRead(analogInPin); // save signal, not AVG
-  //   sensorWindow += analogRead(analogInPin); // running sum, AVG
-  //   delay(30);
-  // }
-
- // GET WINDOW TO CLASSIFY
-  //consecutive
-
-
-  // float data[100];
-
 
   int gap = 10;
   int val = 300;
@@ -305,13 +343,17 @@ int i = 0;
 int short_window = 0;
 
 while (i<content.size()){
-    // cout<<i<<"\n";
+    // cout<<"CURRENT i VALUE: "<<i<<"\n";
     int val =  stof(content[i][1]); // holds current emg
     ema_actual = ema(val, actual, 0.1);
     actual = ema_actual;
 
+    // cout<<"PREV VAL"<<prev_i<<endl;
     if(((gap + ema_actual) < prev_i) || ((-gap + ema_actual) > prev_i)){ // IF ACTION MIGHT BE HAPPENING
-      for(int j = 1; j < WINDOW; j++) {
+      // fill sensor window, smooth with ema
+      int j;
+      for(j = 1; j < WINDOW; j++) {
+        // cout<<"CURRENT i VALUE: "<<i+j<<"\n";
         if((i+j) >= content.size()){
           cout<<"WINDOW TOO SHORT"<<i+j<<"\n";
           short_window = 1;
@@ -322,34 +364,29 @@ while (i<content.size()){
         // cout<<ema_actual<<'\n';
         sensorWindow[j-1] = ema_actual; 
         actual = ema_actual;
-        i++;
+        // i++;
 
       }
-      i++;
+      // prev_i = val;
+      // i++;
 
 
-    //     // INPUT AMPL INTO CLASSIFER TO GET DIRECTION
-    if(short_window == 0){
-        prediction =   match_filter_prediction(sensorWindow); // get avg
-        count++;
+      //  MAKE PREDICTION ON WINDOW
+      if(short_window == 0){
+          prediction =   match_filter_prediction(sensorWindow); // get avg
+          count++;
+          i = (i+j);
+      }
+      else{
+        prediction = -1;
+        break;
+      }
+    
+      cout<<"FINAL PREDICTION: " << prediction << "\n";
     }
-    else{
-      prediction = -1;
-      break;
-    }
-    cout<<"FINAL PREDICTION: " << prediction << "\n";
 
-    //   // OUTPUT DIGITAL SIGNAL TO SERVO/ LINEAR ACTUATION
-
-    //   driveServo(prediction);
-    //   continue;
-    // }
-    // else{
-    //   prev_i = val;
-    //   continue;
-    // }
-
-    }
+    // save previous val for signal detection and incr i to next value
+    prev_i = val;
     i++;
 
 }
