@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-///
+/// SAME AS PYTHON
 int PEAK_HEIGHT_FLX = 30;
 int PEAK_HEIGHT_EXT = 20;
 // int PEAK_HEIGHT_FLX = 335;
@@ -14,7 +14,9 @@ int ext_aligned[100];
 int DC_COMPONENT = 24;
 // int DC_COMPONENT = 60;
 float alpha = 0.4;
-/// 
+
+
+/// THIS FILE ONLY
 int count = 0;
 const int analogInPin = A0;
 int delay_Hz = 30; // change back to 30 after debugging
@@ -26,6 +28,44 @@ int RST_FILTER[100] = {23, 23, 24, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 27, 2
 // int EXT_FILTER[100] = {433, 430, 427, 423, 419, 416, 413, 411, 412, 412, 412, 412, 414, 420, 427, 433, 434, 431, 424, 413, 395, 375, 352, 328, 306, 288, 277, 272, 273, 279, 288, 300, 313, 326, 340, 353, 363, 373, 380, 386, 391, 396, 400, 405, 409, 413, 416, 419, 423, 427, 430, 433, 436, 437, 438, 437, 435, 433, 430, 428, 425, 423, 420, 416, 412, 407, 402, 397, 392, 387, 381, 376, 371, 367, 363, 359, 355, 350, 347, 344, 342, 339, 337, 334, 332, 331, 330, 328, 327, 325, 324, 323, 322, 322, 321, 320, 319, 319, 319, 318};
 // int RST_FILTER[100] = {322, 322, 321, 321, 320, 320, 319, 319, 318, 318, 318, 318, 317, 317, 317, 317, 317, 317, 317, 316, 317, 316, 316, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 317, 318, 318, 318, 319, 319, 319, 319, 320, 320, 320, 321, 321, 321, 321, 322, 322, 322, 322, 322, 322, 322, 322, 322, 322, 323, 323, 323, 323, 324, 324, 324, 324, 325, 325, 325, 325, 325, 325, 326, 326, 326, 327, 327, 327, 327, 327, 327, 327, 327, 327, 328, 328, 328, 328, 328, 328, 328, 328, 328, 329, 329, 329, 329, 329, 330};
 
+
+// DANNY EEPROM STUFF
+#include <EEPROM.h>
+
+// type used to capture each data point in a sample
+// !maximum space in nano is believed to be 1024B!
+// in that case, the hard max is 5B per data point
+#define USE_TYPE short
+
+// N - number of samples represented in window average
+// LO - first sample in window average
+// HI - last sample in window average
+int BASE = 0;
+int LENGTH = 100;
+
+int ADDR_FN  = 0;
+int ADDR_FLO = ADDR_FN + sizeof(USE_TYPE);
+int ADDR_FHI = ADDR_FLO + (LENGTH - 1) * sizeof(USE_TYPE);
+
+int ADDR_EN = ADDR_FHI + sizeof(USE_TYPE);
+int ADDR_ELO = ADDR_EN + sizeof(USE_TYPE);
+int ADDR_EHI = ADDR_ELO + (LENGTH - 1) * sizeof(USE_TYPE);
+
+int LINEUP = 50;
+///////////////////////////////////////////////////////
+
+int addr; 
+USE_TYPE E_val;
+USE_TYPE N;
+
+const uint8_t in_pin = A0;
+int emg;
+
+int dt_ms = 30;
+
+bool start_fresh = false;
+bool align = true;
+////
 
 int ema(int exp, int actual, float alpha){
   return (int) (alpha * (float)exp + (1 - alpha) * (float)actual);
@@ -182,21 +222,21 @@ int match_filter_prediction(int *d){
 
   double PRED;
 
-  Serial.println("ALIGNING");
+  // Serial.println("ALIGNING");
   align_signal(d); // ALIGN AS YOU CONVOLVE
 
   // CONVOLVE AND RETURN MAX?
-  Serial.println("CONVOLVING FLEX");
+  // Serial.println("CONVOLVING FLEX");
   convolve_max(flx_aligned, FLEX_FILTER, &MAX_FLX);
-  Serial.print("MAX FLEX: ");
-  Serial.print(MAX_FLX);
-  Serial.print("\n");
+  // Serial.print("MAX FLEX: ");
+  // Serial.print(MAX_FLX);
+  // Serial.print("\n");
 
-  Serial.println("CONVOLVING EXT");
+  // Serial.println("CONVOLVING EXT");
   convolve_max(ext_aligned, EXT_FILTER, &MAX_EXT);
-  Serial.print("MAX_EXT: ");
-  Serial.print(MAX_EXT);
-  Serial.print("\n");
+  // Serial.print("MAX_EXT: ");
+  // Serial.print(MAX_EXT);
+  // Serial.print("\n");
 
   // Serial.println("CONVOLVING REST");
   // convolve_max(ext_aligned, RST_FILTER, MAX_RST);
@@ -229,6 +269,8 @@ void setup(){
   Serial.begin(9600);
   pinMode(A0, INPUT);
   Serial.println("SETUP DONE");
+  Serial.println("CALIBRATING...");
+  
 }
 
 void loop(){
@@ -281,3 +323,297 @@ void loop(){
 
   
 }
+
+
+
+
+
+void my_setup()
+{
+  Serial.begin(9600);
+  pinMode(in_pin, INPUT);
+
+  if(start_fresh)
+  {
+    mem_wipe();
+  }
+}
+
+void mem_wipe()
+{
+  for (int i = 0; i < EEPROM.length() ; i++)
+  {
+    EEPROM.update(i, -1);
+  }
+
+  EEPROM.put(ADDR_FN, (unsigned USE_TYPE) 0);
+  EEPROM.put(ADDR_EN, (unsigned USE_TYPE) 0);
+
+  Serial.println("Done wipe.");
+}
+
+void mem_fill_filter()
+{
+  for(addr = ADDR_FN; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
+  {
+    EEPROM.get(addr, E_val);
+    for(int i = 0; i<WINDOW-1; i++){
+      FLEX_FILTER[i] = E_val;
+    }
+    // Serial.print(E_val);
+    // Serial.print(",");
+  }
+  Serial.println();
+
+  for(addr = ADDR_EN; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
+  {
+    EEPROM.get(addr, E_val);
+    Serial.print(E_val);
+    Serial.print(",");
+  }
+  Serial.println();
+}
+
+void mem_return()
+{
+  for(addr = ADDR_FN; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
+  {
+    EEPROM.get(addr, E_val);
+    Serial.print(E_val);
+    Serial.print(",");
+  }
+  Serial.println();
+
+  for(addr = ADDR_EN; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
+  {
+    EEPROM.get(addr, E_val);
+    Serial.print(E_val);
+    Serial.print(",");
+  }
+  Serial.println();
+}
+
+USE_TYPE* get_window_ext()
+{
+  USE_TYPE arr[LENGTH + 1];
+  int i = 0;
+
+  for(addr = ADDR_EN; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
+  {
+    EEPROM.get(addr, arr[i]);
+  }
+
+  return arr;
+}
+
+USE_TYPE* get_window_flex()
+{
+  USE_TYPE arr[LENGTH + 1];
+  int i = 0;
+
+  for(addr = ADDR_FN; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
+  {
+    EEPROM.get(addr, arr[i]);
+  }
+
+  return arr;
+}
+
+void mem_catch_noalign(char command)
+{
+  // Loop <LENGTH> times with delay <dt_ms> (nom. 100, 30ms)
+  // Loop iterates over the address space, stepping by sizeof datapoints.
+  // It reads the old value from mem, expands it to maintain an accurate
+  // average, and folds a new sensor value into the average window.
+
+  switch (command)
+  {
+    case 'f':
+      EEPROM.get(ADDR_FN, N);
+
+      for (addr = ADDR_FLO; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
+      {
+        EEPROM.get(addr, E_val);
+        E_val *= N;
+
+        emg = analogRead(in_pin);
+        E_val += (short) emg;
+        E_val /= N + 1;
+
+        EEPROM.put(addr, E_val);
+        delay(dt_ms);
+      }
+
+      N += 1;
+      EEPROM.put(ADDR_FN, N);        
+      break;
+
+    case 'e':
+      EEPROM.get(ADDR_EN, N);
+
+      for (addr = ADDR_ELO; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
+      {
+        EEPROM.get(addr, E_val);
+        E_val *= N;
+
+        emg = analogRead(in_pin);
+        E_val += (short) emg;
+        E_val /= N + 1;
+
+        EEPROM.put(addr, E_val);
+        delay(dt_ms);
+      }
+
+      N += 1;
+      EEPROM.put(ADDR_EN, N);        
+      break;
+
+    default:
+      return;
+      break;
+  }
+}
+
+void mem_catch(char command)
+{
+  int emg_arr[LENGTH];
+  int lim_emg;
+  int lim_ind;
+  int i;
+  int offset;
+
+  switch (command)
+  {
+    case 'f':
+
+      lim_ind = -1;
+      lim_emg = -1000;
+
+      // Take data points, hold index of global maximum
+      for (i = 0; i < LENGTH; i++)
+      {
+        emg_arr[i] = analogRead(in_pin);
+
+        if (emg_arr[i] > lim_emg)
+        {
+          lim_emg = emg_arr[i];
+          lim_ind = i;
+        }
+
+        delay(dt_ms);
+      }
+
+      // How far we need to shift
+      // - Positive val means pulse is too far ahead, and must be right shifted
+      // - Negative val means pulse is lagging behind, and must be left shifted
+      offset = LINEUP - lim_ind;
+
+      i = 0;
+      for (addr = ADDR_FLO; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
+      {
+        // If the wave is shifted right (offset positive)
+        // Extrapolate beginning values
+        if (i < offset)
+        {
+          emg = emg_arr[0];
+        }
+        // Else if the wave is shifted left (offset negative)
+        // Extrapolate end values
+        else if (i > (LENGTH - 1 + offset))
+        {
+          emg = emg_arr[LENGTH - 1];
+        }
+        // Iterate through the inner values, with actual pulse data
+        else
+        {
+          emg = emg_arr[i - offset];
+        }
+        i++;
+
+        // Retrieve N and pulse window, fold in the new values
+        EEPROM.get(ADDR_FN, N);
+        EEPROM.get(addr, E_val);
+        E_val *= N;
+
+        E_val += (short) emg;
+        E_val /= N + 1;
+
+        EEPROM.put(addr, E_val);
+      }
+
+      N += 1;
+      EEPROM.put(ADDR_FN, N); 
+
+      Serial.println("Done F.");
+      break;
+
+    case 'e':
+
+      lim_ind = -1;
+      lim_emg = 1000;
+
+      // Take data, hold index of global minimum
+      for (i = 0; i < LENGTH; i++)
+      {
+        emg_arr[i] = analogRead(in_pin);
+
+        if (emg_arr[i] < lim_emg)
+        {
+          lim_emg = emg_arr[i];
+          lim_ind = i;
+        }
+
+        delay(dt_ms);
+      }
+
+      // How far we need to shift
+      // - Positive val means pulse is too far ahead, and must be right shifted
+      // - Negative val means pulse is lagging behind, and must be left shifted
+      offset = LINEUP - lim_ind;
+
+      i = 0;
+      for (addr = ADDR_ELO; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
+      {
+        // If the wave is shifted right (offset positive)
+        // Extrapolate beginning values
+        if (i < offset)
+        {
+          emg = emg_arr[0];
+        }
+        // Else if the wave is shifted left (offset negative)
+        // Extrapolate end values
+        else if (i > (LENGTH - 1 + offset))
+        {
+          emg = emg_arr[LENGTH - 1];
+        }
+        // Iterate through the inner values, with actual pulse data
+        else
+        {
+          emg = emg_arr[i - offset];
+        }
+        i++;
+
+        // Retrieve N and pulse window, fold in the new values
+        EEPROM.get(ADDR_EN, N);
+        EEPROM.get(addr, E_val);
+        E_val *= N;
+
+        E_val += (short) emg;
+        E_val /= N + 1;
+
+        EEPROM.put(addr, E_val);
+      }
+
+      N += 1;
+      EEPROM.put(ADDR_EN, N); 
+
+      Serial.println("Done E.");
+      break;
+
+    default:
+      return;
+      break;
+  }
+}
+
+

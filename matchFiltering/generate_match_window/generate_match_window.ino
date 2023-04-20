@@ -25,7 +25,7 @@ int LINEUP = 50;
 ///////////////////////////////////////////////////////
 
 int addr; 
-USE_TYPE val;
+USE_TYPE E_val;
 USE_TYPE N;
 
 const uint8_t in_pin = A0;
@@ -35,6 +35,10 @@ int dt_ms = 30;
 
 bool start_fresh = false;
 bool align = true;
+float alpha = 0.4;
+int actual = 0; // CHANGING THIS AFFECTS THE DC OFFSET
+int ema_actual = 0;
+int ema_val = 0;
 
 void setup()
 {
@@ -48,7 +52,9 @@ void setup()
 }
 
 
-
+int ema(int exp, int actual, float alpha){
+  return (int) (alpha * (float)exp + (1 - alpha) * (float)actual);
+}
 
 void mem_wipe()
 {
@@ -67,24 +73,24 @@ void mem_return()
 {
   for(addr = ADDR_FN; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
   {
-    EEPROM.get(addr, val);
-    Serial.print(val);
+    EEPROM.get(addr, E_val);
+    Serial.print(E_val);
     Serial.print(",");
   }
   Serial.println();
 
   for(addr = ADDR_EN; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
   {
-    EEPROM.get(addr, val);
-    Serial.print(val);
+    EEPROM.get(addr, E_val);
+    Serial.print(E_val);
     Serial.print(",");
   }
   Serial.println();
 }
 
-USETYPE* get_window_ext()
+USE_TYPE* get_window_ext()
 {
-  USETYPE arr[LENGTH + 1];
+  USE_TYPE arr[LENGTH + 1];
   int i = 0;
 
   for(addr = ADDR_EN; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
@@ -95,9 +101,9 @@ USETYPE* get_window_ext()
   return arr;
 }
 
-USETYPE* get_window_flex()
+USE_TYPE* get_window_flex()
 {
-  USETYPE arr[LENGTH + 1];
+  USE_TYPE arr[LENGTH + 1];
   int i = 0;
 
   for(addr = ADDR_FN; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
@@ -122,14 +128,14 @@ void mem_catch_noalign(char command)
 
       for (addr = ADDR_FLO; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
       {
-        EEPROM.get(addr, val);
-        val *= N;
+        EEPROM.get(addr, E_val);
+        E_val *= N;
 
         emg = analogRead(in_pin);
-        val += (short) emg;
-        val /= N + 1;
+        E_val += (short) emg;
+        E_val /= N + 1;
 
-        EEPROM.put(addr, val);
+        EEPROM.put(addr, E_val);
         delay(dt_ms);
       }
 
@@ -142,14 +148,14 @@ void mem_catch_noalign(char command)
 
       for (addr = ADDR_ELO; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
       {
-        EEPROM.get(addr, val);
-        val *= N;
+        EEPROM.get(addr, E_val);
+        E_val *= N;
 
         emg = analogRead(in_pin);
-        val += (short) emg;
-        val /= N + 1;
+        E_val += (short) emg;
+        E_val /= N + 1;
 
-        EEPROM.put(addr, val);
+        EEPROM.put(addr, E_val);
         delay(dt_ms);
       }
 
@@ -181,7 +187,8 @@ void mem_catch(char command)
       // Take data points, hold index of global maximum
       for (i = 0; i < LENGTH; i++)
       {
-        emg_arr[i] = analogRead(in_pin);
+        ema_val = analogRead(in_pin);
+        emg_arr[i] = ema(ema_val,actual,alpha);
 
         if (emg_arr[i] > lim_emg)
         {
@@ -221,13 +228,13 @@ void mem_catch(char command)
 
         // Retrieve N and pulse window, fold in the new values
         EEPROM.get(ADDR_FN, N);
-        EEPROM.get(addr, val);
-        val *= N;
+        EEPROM.get(addr, E_val);
+        E_val *= N;
 
-        val += (short) emg;
-        val /= N + 1;
+        E_val += (short) emg;
+        E_val /= N + 1;
 
-        EEPROM.put(addr, val);
+        EEPROM.put(addr, E_val);
       }
 
       N += 1;
@@ -244,7 +251,8 @@ void mem_catch(char command)
       // Take data, hold index of global minimum
       for (i = 0; i < LENGTH; i++)
       {
-        emg_arr[i] = analogRead(in_pin);
+        ema_val = analogRead(in_pin);
+        emg_arr[i] = ema(ema_val,actual,alpha);
 
         if (emg_arr[i] < lim_emg)
         {
@@ -284,13 +292,13 @@ void mem_catch(char command)
 
         // Retrieve N and pulse window, fold in the new values
         EEPROM.get(ADDR_EN, N);
-        EEPROM.get(addr, val);
-        val *= N;
+        EEPROM.get(addr, E_val);
+        E_val *= N;
 
-        val += (short) emg;
-        val /= N + 1;
+        E_val += (short) emg;
+        E_val /= N + 1;
 
-        EEPROM.put(addr, val);
+        EEPROM.put(addr, E_val);
       }
 
       N += 1;
@@ -307,6 +315,10 @@ void mem_catch(char command)
 
 void loop()
 {
+  // delay(dt_ms);
+  // ema_val = analogRead(in_pin);
+  // ema_actual = ema(ema_val,actual,alpha);
+  // Serial.println(ema_actual);
   if( Serial.available() > 0 )
   {
     char in_char = Serial.read();

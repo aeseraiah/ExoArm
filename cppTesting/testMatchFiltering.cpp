@@ -238,7 +238,6 @@ int main() {
 // j is element (1 has data)
 // i is row
 
-
 int i = 0;
 int short_window = 0;
 
