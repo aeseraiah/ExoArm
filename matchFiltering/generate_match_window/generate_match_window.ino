@@ -82,6 +82,32 @@ void mem_return()
   Serial.println();
 }
 
+USETYPE* get_window_ext()
+{
+  USETYPE arr[LENGTH + 1];
+  int i = 0;
+
+  for(addr = ADDR_EN; addr <= ADDR_EHI; addr += sizeof(USE_TYPE))
+  {
+    EEPROM.get(addr, arr[i]);
+  }
+
+  return arr;
+}
+
+USETYPE* get_window_flex()
+{
+  USETYPE arr[LENGTH + 1];
+  int i = 0;
+
+  for(addr = ADDR_FN; addr <= ADDR_FHI; addr += sizeof(USE_TYPE))
+  {
+    EEPROM.get(addr, arr[i]);
+  }
+
+  return arr;
+}
+
 void mem_catch_noalign(char command)
 {
   // Loop <LENGTH> times with delay <dt_ms> (nom. 100, 30ms)
