@@ -1,4 +1,4 @@
-Port = usbserial-1410
+Port = usbserial-1420
 BaudRate = 9600
 DataBits = 8
 Parity = N
@@ -10,7 +10,7 @@ UseSoftwareSupportedFlowControl = true
 BlockKeystrokesWhileFlowHalted = true
 DTRDefaultState = true
 RTSDefaultState = true
-ViewerMode = Plain
+ViewerMode = Chart
 WrapPlainText = true
 TerminalMode = Raw
 EnterKeyEmulation = CRLF
@@ -109,4 +109,4 @@ ChartTimeReference = ElapsedTime
 ChartXAxisScaleRatio = 1
 ChartTraceProperties = 0:Label=Trace 1	Color=&h000000FF	Style=0	Width=1	MStyle=8	Scale=0	Visible=True
 KeepOnTop = false
-WindowPosition = -2,105,720,795
+WindowPosition = 14,105,782,842

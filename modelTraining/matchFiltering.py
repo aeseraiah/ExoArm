@@ -96,6 +96,8 @@ def generate_data_lists(excel_file, TRAINING_DATA_COUNT):
         plt.plot(npd)
         # plt.show()
     plt.title("ALL TRAINING SIGNALS")
+    plt.xlabel("Time(ms)")
+    plt.ylabel("EMG Amplitude (mV)")
     plt.show()
 
     # 
@@ -151,28 +153,31 @@ def match_filter_prediction(d):
 
     flx_aligned, ext_aligned = align_signal(d) # ALIGN AS YOU CONVOLVE
     out_flx_aligned = my_convolve(flx_aligned, A_FLEX_FILTER) # CONVOLVE FLX ALIGNED W/ FLX FILTER & EXT ALIGNED W/ EXT FILTER
-    out_ext_aligned = my_convolve(ext_aligned, A_EXT_FILTER)
-    out_rst_aligned = my_convolve(ext_aligned, A_RST_FILTER) # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
+    out_ext_aligned = my_convolve(flx_aligned, A_EXT_FILTER)
+    # out_rst_aligned = my_convolve(flx_aligned, A_RST_FILTER) # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
+    # out_ext_aligned = my_convolve(ext_aligned, A_EXT_FILTER)
+    # out_rst_aligned = my_convolve(ext_aligned, A_RST_FILTER) # CONVOLVE RST FILTER WITH EITHER ALIGNMENT
 
     # print(f"FLX CONV {out_flx_aligned}")
     # print(f"EXT CONV {out_ext_aligned}")
     # print(f"RST CONV {out_rst_aligned}")
     plt.plot(out_flx_aligned, 'r')
     plt.plot(out_ext_aligned, 'b')
-    plt.plot(out_rst_aligned, 'y')
+    # plt.plot(out_rst_aligned, 'y')
 
     MAX_FLX = np.max(out_flx_aligned)
     MAX_EXT = np.max(out_ext_aligned)
-    MAX_RST = np.max(out_rst_aligned)
+    # MAX_RST = np.max(out_rst_aligned)
+
 
     PRED = np.max([MAX_FLX, MAX_EXT])
 
-    print(f'\n{MAX_FLX:.2e}, {MAX_EXT:.2e}, {MAX_RST:.2e}')
+    print(f'\n{MAX_FLX:.2e}, {MAX_EXT:.2e}')
     # AVG_DIFF = np.average(np.abs(np.diff([MAX_FLX, MAX_EXT, MAX_RST])))
 
 
-    DIFF_EXT_RST = np.diff([MAX_RST, MAX_EXT])
-    DIFF_FLX_RST = np.diff([MAX_RST, MAX_FLX])
+    # DIFF_EXT_RST = np.diff([MAX_RST, MAX_EXT])
+    # DIFF_FLX_RST = np.diff([MAX_RST, MAX_FLX])
 
     # AVG_DIFF = np.average([DIFF_EXT_RST, DIFF_FLX_RST])
     # # print(f'AVG DIFFERENCE: {AVG_DIFF}')
@@ -193,9 +198,9 @@ def match_filter_prediction(d):
     elif PRED == MAX_EXT:
         print(f'PREDICT EXT {np.max(out_flx_aligned):.2e}')
         return extension
-    elif PRED == MAX_RST: # REST CASE
-        print(f'PREDICT RST {np.max(out_rst_aligned):.2e}')
-        return rest
+    # elif PRED == MAX_RST: # REST CASE
+    #     print(f'PREDICT RST {np.max(out_rst_aligned):.2e}')
+    #     return rest
     else:
         return -1
 
@@ -209,26 +214,26 @@ def match_filter_prediction(d):
 # plot filter in EEPROM
 EEPROM_flex = [23,23,23,23,23,23,23,23,23,23,23,23,23,22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,22,22,21,22,21,20,22,22,22,22,22,22,22,22,23,23,25,30,36,33,32,30,27,25,23,20,16,14,14,16,20,20,20,19,19,18,15,14,14,15,17,15,16,17,18,19,20,20,21,19,19,20,19,20,21,21,22,23,24,23,23,22,23,24,23,23,23,24]
 EEPROM_ext = [23,23,23,23,23,23,23,23,23,23,22,23,23,23,23,23,22,23,23,23,22,23,23,23,22,23,22,23,23,23,24,24,25,26,25,26,27,27,26,28,27,26,26,24,23,22,20,18,14,13,10,12,13,14,17,16,16,18,19,20,20,20,21,22,22,22,22,22,22,22,22,22,22,22,23,23,23,22,22,23,22,22,22,23,23,23,23,23,23,22,22,22,23,23,23,23,23,23,23,23]
-plt.plot(EEPROM_flex)
-plt.plot(EEPROM_ext)
-plt.legend(["EEPROM FLEXION", "EEPROM EXTENSION"])
-plt.show()
+# plt.plot(EEPROM_flex)
+# plt.plot(EEPROM_ext)
+# plt.legend(["EEPROM FLEXION", "EEPROM EXTENSION"])
+# plt.show()
 
 
 # CONSTANTS
 window_size = 100
-alpha = 0.5
+alpha = 0.3
 DC_COMPONENT = 60 # unfiltered: 300 , used for edge cases
 # DC_COMPONENT = 0 # filtered: 0
 
 MID = window_size//2 # AT WHAT POINT TO ALIGN PEAKS, 50 is halfway into window
 
-PEAK_HEIGHT_FLX = 65
+PEAK_HEIGHT_FLX = 64
 # PEAK_HEIGHT_FLX = 335
 PEAK_HEIGHT_EXT = 55 # WILL BE NEGATED
 # PEAK_HEIGHT_EXT = 295 # WILL BE NEGATED
 
-POOR_PREDICTION_THRESHOLD = 850000
+# POOR_PREDICTION_THRESHOLD = 850000
 
 
 # excel_file = "../data/filenames-indexes_lpfilter.xlsx" # FOR TRAINING
@@ -282,7 +287,8 @@ for y, data in enumerate(EXTENSION_DATA):
         EXT_FILTER[i] += el
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
-    _, ext_new_wave = align_signal(data)
+    ext_new_wave, _ = align_signal(data) # align signal like flexion for extension
+    # _, ext_new_wave = align_signal(data)
     plt.plot(ext_new_wave)
     for i, el in enumerate(ext_new_wave):
         A_EXT_FILTER[i] += el
@@ -301,7 +307,7 @@ for y, data in enumerate(REST_DATA):
         RST_FILTER[i] += el
 
     # CREATE HIGH PEAK ALIGNED FILTER, SAVE FILTER TO RUNNING AVG
-    _, rst_new_wave = align_signal(data) # IF NO PEAKS, SHOULD MOST LIKELY BE REST, ORIGINAL SIGNAL, EITHER OUTPUT VALID
+    rst_new_wave, _ = align_signal(data) # IF NO PEAKS, SHOULD MOST LIKELY BE REST, ORIGINAL SIGNAL, EITHER OUTPUT VALID
     plt.plot(rst_new_wave) # USE FOR PRUNING DATA
     # plt.title(y+1)
     # plt.ylim((250,350))
@@ -338,27 +344,30 @@ CHANGE_DC_OFFSET = DC_COMPONENT - 24
 
 li = [(i - CHANGE_DC_OFFSET) for i in FLEX_FILTER]
 print(li)
-plt.plot(FLEX_FILTER, color = 'b')
+# plt.plot(FLEX_FILTER, color = 'b')
 plt.plot(A_FLEX_FILTER, color = 'r')
-plt.legend(["UNALIGNED", "ALIGNED"])
+plt.legend(["ALIGNED"])
+# plt.legend(["UNALIGNED", "ALIGNED"])
 plt.title("FLEXION FILTERS")
 plt.ylim((0,100))
 plt.show()
 
 li = [(i - CHANGE_DC_OFFSET) for i in EXT_FILTER]
 print(li)
-plt.plot(EXT_FILTER, color = 'b')
+# plt.plot(EXT_FILTER, color = 'b')
 plt.plot(A_EXT_FILTER, color = 'r')
-plt.legend(["UNALIGNED", "ALIGNED"])
+plt.legend(["ALIGNED"])
+# plt.legend(["UNALIGNED", "ALIGNED"])
 plt.title("EXTENSION FILTERS")
 plt.ylim((0,100))
 plt.show()
 
 li = [(i - CHANGE_DC_OFFSET) for i in RST_FILTER]
 print(li)
-plt.plot(RST_FILTER, color = 'b')
+# plt.plot(RST_FILTER, color = 'b')
 plt.plot(A_RST_FILTER, color = 'r')
-plt.legend(["UNALIGNED", "ALIGNED"])
+plt.legend(["ALIGNED"])
+# plt.legend(["UNALIGNED", "ALIGNED"])
 plt.title("REST FILTERS")
 plt.ylim((0,100))
 plt.show()
@@ -481,9 +490,9 @@ for pt in emg_data_raw:
 # predictions made when drop is detected
 
 prev_i = 0 # for comparison
-gap = 5 # how much of a decrease between two idx's
-idx = 0 # index for iteration
-backtrack = 10 # how much to go back once window starts
+gap = 8 # how much of a decrease between two idx's
+idx = 15 # index for iteration
+backtrack = 0 # how much to go back once window starts
 count_features = 0
 
 
@@ -491,8 +500,17 @@ while((idx+window_size)<len(emg_data)):
     if ((gap + emg_data[idx]) < prev_i) or (-gap +emg_data[idx] > prev_i):
         # print(f'WINDOW START: {idx}')
         window = emg_data[idx:idx+window_size]
-        # plt.plot(window)
-        # plt.show()
+        plt.plot(window)
+        aligned_window , _ = align_signal(window)
+        plt.plot(aligned_window)
+        # plt.plot(FLEX_FILTER)
+        # plt.plot(EXT_FILTER)
+        plt.title(f"MOVEMENT DETECTED")
+        # plt.title(f"WINDOW START {idx}")
+        plt.ylim(0,100)
+        # plt.legend(["UNALIGNED WINDOW", "CURRENT WINDOW", "FLEX FILTER", "EXTEND FILTER"])
+        plt.legend(["UNALIGNED WINDOW", "ALIGNED WINDOW"])
+        plt.show()
         
         PRED = match_filter_prediction(window)
             
