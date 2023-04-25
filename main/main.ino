@@ -16,7 +16,7 @@ int prediction = 0;
 int prevpred = 1;
 int EXT = 1;
 int FLX = 0;
-int RST = 2;
+int RST = 3;
 
 
 

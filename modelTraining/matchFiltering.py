@@ -80,7 +80,6 @@ def generate_data_lists(excel_file, TRAINING_DATA_COUNT):
 
     # TURN DATA INTO NUMPY ARRAY AND SMOOTH WITH EMA
     np_data = []
-    expected = 0
     actual = 0
     for curr_array in data:
         d = curr_array.iloc[:,0].to_numpy()
@@ -466,7 +465,6 @@ traj = []
 
 test_data = pd.read_csv(test_file_realtime, delimiter='\t')
 emg_data_raw = test_data[test_data.columns[1]]
-expected = 0
 actual = 0
 
 # 
