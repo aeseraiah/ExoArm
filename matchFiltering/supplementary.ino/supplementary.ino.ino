@@ -79,7 +79,7 @@ int ema(int exp, int actual, float alpha){
   // 0.1 is large smoothing, 0.5 is less smoothing, 1 is basically none
   // float value 0 to 1
   // Serial.println(( (alpha * (float)(exp)) + ((1 - alpha) * (float)(actual))) );
-  // Serial.println((int)( (alpha * (float)(exp)) + ((1 - alpha) * (float)(actual))) );
+  Serial.println((int)( (alpha * (float)(exp)) + ((1 - alpha) * (float)(actual))) );
   return (int) ( (alpha * (float)(exp)) + ((1 - alpha) * (float)(actual)) );
 }
 
@@ -267,7 +267,7 @@ int match_filter_prediction(int *d){
 
   Serial.println("END CONVOLUTION");
 
-  Serial.println(*MAX_SIG);
+  // Serial.println(*MAX_SIG);
   // if (MAX_FLX < 300000 || MAX_EXT < 300000){
   //   Serial.println("Low Similarity, No prediction");
   //   return -1;
@@ -305,16 +305,16 @@ void setup(){
   mem_fill_filter();
   Serial.println("FILTERS LOADED");
 
-  Serial.println("FLEXION FILTER");
-  for(int i = 0; i < WINDOW-1; i++){
-    Serial.println(FLEX_FILTER[i]);
-    delay(dt_ms);
-  }
-  Serial.println("EXTENSION FILTER");
-  for(int i = 0; i < WINDOW-1; i++){
-    Serial.println(EXT_FILTER[i]);
-    delay(dt_ms);
-  }
+  // Serial.println("FLEXION FILTER");
+  // for(int i = 0; i < WINDOW-1; i++){
+  //   Serial.println(FLEX_FILTER[i]);
+  //   delay(dt_ms);
+  // }
+  // Serial.println("EXTENSION FILTER");
+  // for(int i = 0; i < WINDOW-1; i++){
+  //   Serial.println(EXT_FILTER[i]);
+  //   delay(dt_ms);
+  // }
   
 }
 
@@ -326,7 +326,7 @@ void loop(){
   // 
 
   int sensorWindow[WINDOW];
-  int gap = 5;
+  int gap = 3;
   int val = 0;
   int prev_i;
 
@@ -376,17 +376,32 @@ void loop(){
       prediction = match_filter_prediction(sensorWindow);
 
       // process the prediction and move the servo
-      if (prediction == EXT){
+      if ((prediction == FLX) && (prevpred == EXT)){
         Serial.println("PREDICTION : EXTENSION");
-        // driveServo(prediction);
+        prevpred = FLX;
+        driveServo(EXT);
       }
-      else if (prediction == FLX){
+      else if ((prediction == EXT) && (prevpred == FLX)){
         Serial.println("PREDICTION : FLEXION");
-        // driveServo(prediction);
+        prevpred = EXT;
+        driveServo(FLX);
       }
       else{
         Serial.println("PREDICTION : REST");
       }
+      // if (prediction == EXT){
+      //   Serial.println("PREDICTION : EXTENSION");
+      //   // driveServo(prediction);
+      // }
+      // else if (prediction == FLX){
+      //   Serial.println("PREDICTION : FLEXION");
+      //   // driveServo(prediction);
+      // }
+      // else{
+      //   Serial.println("PREDICTION : REST");
+      // }
+
+      // prevpred = prediction;
     }
 
     // otherwise continue to poll for movement
@@ -428,8 +443,8 @@ void mem_fill_filter()
 void driveServo(int pred){
 
   int SERV_PIN = 9;   // PWM pin
-  int SERV_MIN = 20;   // minimum servo angle FLEXION
-  int SERV_MAX = 160; // maximum sevo angle EXTENSION
+  int SERV_MIN = 10;   // minimum servo angle FLEXION
+  int SERV_MAX = 180; // maximum sevo angle EXTENSION
 
   // unsigned long dt_ms = 250; // 16 Hz
   unsigned long servo_dt_ms = 1500; // 16 Hz

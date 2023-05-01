@@ -113,7 +113,10 @@ def generate_data_lists(excel_file, TRAINING_DATA_COUNT):
             plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'purple')
         for i in rest_startindexes[index_index]:
             plt.plot(data[index_index].iloc[:,0][ int(i) : int(i) + window_size], color = 'orange')
-        plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
+        plt.title("Muscle Activation\nFLEXION - RED , EXTENSION - GREEN")
+        plt.xlabel("time(ms)")
+        plt.ylabel("amplitude(mV)")
+        # plt.title("FLEXION - RED , EXTENSION - GREEN, SUSTAIN - PURPLE, REST - ORANGE")
         plt.show()
 
 
